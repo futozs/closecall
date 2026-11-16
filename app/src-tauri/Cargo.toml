@@ -1,0 +1,25 @@
+[package]
+name = "closecall-app"
+description = "Close Call desktop app: tray, settings window, IPC commands."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+name = "closecall_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+closecall-core.workspace = true
+tauri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

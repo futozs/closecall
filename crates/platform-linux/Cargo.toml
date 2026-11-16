@@ -1,0 +1,15 @@
+[package]
+name = "closecall-platform-linux"
+description = "Linux adapter (v0.3). Compiles to an empty platform for now."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+closecall-core.workspace = true
+
+[lints]
+workspace = true

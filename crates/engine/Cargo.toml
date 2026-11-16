@@ -1,0 +1,15 @@
+[package]
+name = "closecall-engine"
+description = "Close Call engine: inventory index, trigger fusion, scheduler, executor and run journal."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+closecall-core.workspace = true
+
+[lints]
+workspace = true

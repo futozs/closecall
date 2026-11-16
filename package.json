@@ -1,0 +1,10 @@
+{
+  "name": "closecall-workspace",
+  "private": true,
+  "workspaces": ["app"],
+  "scripts": {
+    "dev": "bun --cwd app tauri dev",
+    "build": "bun --cwd app tauri build",
+    "check": "bun --cwd app run check"
+  }
+}

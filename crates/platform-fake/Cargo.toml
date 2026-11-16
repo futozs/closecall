@@ -1,0 +1,15 @@
+[package]
+name = "closecall-platform-fake"
+description = "Scripted inventory and signals for tests, UI development and demos."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+closecall-core.workspace = true
+
+[lints]
+workspace = true
