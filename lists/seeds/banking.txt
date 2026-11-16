@@ -1,0 +1,27 @@
+# Hand-curated banking domains, mostly Hungarian. Part of Close Call, GPL-3.0-or-later.
+# A listed domain also covers its subdomains, so netbank hosts need no entry of their own.
+# Every domain was checked with dig before it was added (2026-11-16).
+
+otpbank.hu
+kh.hu
+erstebank.hu
+mbhbank.hu
+# MBH Bank merged these banks; their old domains still resolve.
+mkb.hu
+budapestbank.hu
+takarekbank.hu
+raiffeisen.hu
+unicreditbank.hu
+cib.hu
+granitbank.hu
+magnetbank.hu
+revolut.com
+wise.com
+transferwise.com
+
+# State portals that show personal tax and finance data.
+onya.nav.gov.hu
+eszja.nav.gov.hu
+magyarorszag.hu
+ugyfelkapu.gov.hu
+webkincstar.allamkincstar.gov.hu

@@ -1,0 +1,20 @@
+# Hand-curated health portals, mostly Hungarian. Part of Close Call, GPL-3.0-or-later.
+# No openly licensed health-site list exists, so this stays small and specific.
+# Every domain was checked with dig before it was added (2026-11-16).
+
+# EESZT, the national e-health record.
+eeszt.gov.hu
+eeszt.hu
+e-egeszsegugy.gov.hu
+
+# Private clinics and labs whose portals show results.
+medicover.hu
+synlab.hu
+affidea.hu
+dunamedical.hu
+budaiegeszsegkozpont.hu
+doktor24.hu
+
+www.nhsapp.service.nhs.uk
+doctolib.fr
+doctolib.de

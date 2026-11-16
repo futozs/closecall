@@ -1,0 +1,17 @@
+# Hand-curated webmail hosts. Part of Close Call, GPL-3.0-or-later.
+# Only the mail host is listed where the parent domain also serves unrelated sites.
+# Every domain was checked with dig before it was added (2026-11-16).
+
+freemail.hu
+citromail.hu
+mail.google.com
+outlook.live.com
+outlook.office.com
+outlook.office365.com
+outlook.cloud.microsoft
+proton.me
+mail.yahoo.com
+mail.aol.com
+mail.zoho.com
+mail.zoho.eu
+app.tuta.com

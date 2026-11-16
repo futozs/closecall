@@ -1,0 +1,13 @@
+app.tuta.com
+citromail.hu
+freemail.hu
+mail.aol.com
+mail.google.com
+mail.yahoo.com
+mail.zoho.com
+mail.zoho.eu
+outlook.cloud.microsoft
+outlook.live.com
+outlook.office.com
+outlook.office365.com
+proton.me
