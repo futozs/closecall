@@ -11,6 +11,9 @@ targets = [
 all-features = true
 
 [advisories]
+# Unmaintained notices only for crates we depend on directly; transitive ones (zbus internals in
+# Tauri's Linux stack) are tracked through Dependabot and can only be fixed upstream.
+unmaintained = "workspace"
 ignore = [
   { id = "RUSTSEC-2024-0370", reason = "proc-macro-error is a build-time dependency of gtk-rs 0.18 (Tauri's Linux stack); no maintained release of that stack exists yet" },
 ]

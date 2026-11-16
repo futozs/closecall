@@ -12,7 +12,6 @@ use std::time::Duration;
 
 use closecall_engine::{Engine, EngineSettings};
 use tauri::{App, Manager, RunEvent, WindowEvent};
-use tauri_plugin_autostart::MacosLauncher;
 
 use crate::native::Native;
 use crate::shell::Shell;
@@ -36,11 +35,7 @@ pub fn run() -> ExitCode {
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             shell::second_instance(app, &argv);
         }))
-        .plugin(
-            tauri_plugin_autostart::Builder::new()
-                .macos_launcher(MacosLauncher::LaunchAgent)
-                .build(),
-        )
+        .plugin(autostart())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -169,4 +164,12 @@ fn init_tracing() {
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
         .init();
+}
+
+fn autostart<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    let builder = tauri_plugin_autostart::Builder::new();
+    // The AppleScript launcher would add a System Events Automation prompt; the setting only exists on macOS.
+    #[cfg(target_os = "macos")]
+    let builder = builder.macos_launcher(tauri_plugin_autostart::MacosLauncher::LaunchAgent);
+    builder.build()
 }
