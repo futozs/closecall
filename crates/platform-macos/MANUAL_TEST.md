@@ -68,9 +68,9 @@ With Accessibility and Automation granted, start a share (or `simulate` a screen
 ## Restore (Activity → Restore)
 
 - [ ] Chromium, normal tab: reopens in its own window when that window still exists, otherwise in another normal window, otherwise in a new normal window. Never in an incognito window, even when one is frontmost.
-- [ ] Chromium incognito tab: `reason.restore_private`, nothing opens. Arc (no mode reported): same.
+- [ ] Chromium incognito tab: `reason.private_not_restorable`, nothing opens. Arc (no mode reported): same.
 - [ ] Quit the browser after the run, then restore one of its tabs: `app_not_running`, the browser does not launch.
-- [ ] Safari tab: `reason.restore_private`, nothing opens.
+- [ ] Safari tab: `reason.private_not_restorable`, nothing opens.
 - [ ] A hidden browser or app unhides. One that quit since: `app_not_running`, nothing launches.
 - [ ] Closed file-backed document (Preview, TextEdit, Word, the non-scriptable editor): reopens in the same app. Quit the app first: it launches with the document.
 - [ ] Closed untitled window: `restore_no_file`. Moved or deleted file: `restore_file_missing`.
@@ -95,6 +95,8 @@ non-scriptable editor (for example Visual Studio Code or Pixelmator).
 - [ ] Close, dirty, `discard` (non-autosave app such as Word or the non-scriptable editor): changes are gone, window closed. Autosave apps (TextEdit, Preview, iWork) hide instead.
 - [ ] Non-scriptable editor, dirty, `save_then_close`: the sheet's Save button is pressed (not Don't Save) in both languages.
 - [ ] A sheet with an unexpected layout (more than three buttons) is cancelled and the window concealed (`sheet_unrecognized_hidden`).
+- [ ] Terminal window whose title matches a document rule: "Terminate running processes?" is cancelled, never answered with Terminate, and the window concealed (`sheet_unrecognized_hidden`).
+- [ ] A window with a Print or Export sheet already open is concealed without touching the sheet (`sheet_open_hidden`).
 - [ ] Two documents with the same file name in different folders: the right one closes, or the step falls back to the close button.
 - [ ] Office `full name`: note whether it is POSIX or HFS on this version.
 
