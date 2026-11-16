@@ -20,7 +20,7 @@ toml.workspace = true
 lz4_flex.workspace = true
 
 [dev-dependencies]
-sha2 = "0.10.9"
+sha2 = "0.11.1"
 
 [lints]
 workspace = true
