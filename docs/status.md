@@ -8,7 +8,8 @@ what you learned, keep it short. Last updated: 2026-11-16.
 Pre-alpha. v0.1 (macOS), milestone M1 "skeleton" is code-complete on `main`; nothing is released and
 nothing has run on a real share yet. The core contract, lists, engine with the scripted fake
 platform, the macOS adapter, the Tauri shell, the settings UI, CI and the docs are merged, plus the
-ignore list for always-on capturers and own monitors ([ADR-0011](decisions/0011-ignore-list-share-ui-display-connected.md), proposed).
+ignore list for always-on capturers and own monitors ([ADR-0011](decisions/0011-ignore-list-share-ui-display-connected.md)) and
+the `close()` logo with the DMG install window ([ADR-0012](decisions/0012-logo-close-paren.md)).
 
 ## What works (checked in CI or locally on 2026-11-16)
 
@@ -17,6 +18,9 @@ ignore list for always-on capturers and own monitors ([ADR-0011](decisions/0011-
 - UI: `bun run check`, Biome, Vitest (43), Playwright (48, desktop and mobile, EN and HU), the
   production build. `check-i18n` and `check-message-keys` pass: every key Rust can emit has text.
 - `closecall diag` (stand-alone) waits for the providers' first inventory and reports real counts.
+- `bun run build` produces an unsigned `Close Call_0.1.0_aarch64.dmg` (about 5 MB). The Finder window
+  was checked on macOS 27.2: background, icon positions and the 660×428 window (400 px of content
+  under the title bar). With hidden files shown, Finder adds a scrollbar for `.background`; that is normal.
 - Engine behaviour covered by scenarios: share, mirroring and display-connected guards; a guard that
   comes on without firing (debounced restart, pause ending, resume) sweeps what is open; batches
   only see targets with the same action, plus the run's protected targets; a left-open target is
