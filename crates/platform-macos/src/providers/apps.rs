@@ -9,7 +9,7 @@ use closecall_core::{
 };
 use objc2_application_services::AXError;
 
-use super::{done, failed, hide_app, hide_instead, same_instance, skipped};
+use super::{done, failed, hide_app, hide_instead, same_instance, skipped, unhide_app};
 use crate::apps::{self, RunningApp};
 use crate::ax::{self, Ax};
 use crate::poll::{self, Poller};
@@ -127,6 +127,17 @@ impl Provider for AppProvider {
             Action::Hide => hide_app(app.pid),
             Action::Quit => quit(&app, step.on_unsaved),
             Action::Close | Action::Minimize => skipped(keys::UNSUPPORTED),
+        }
+    }
+
+    /// A quit app is not relaunched: launching it is the user's call, and state restoration
+    /// could bring back the very windows that were concealed.
+    fn restore(&mut self, target: &Target, action: Action, _deadline: Instant) -> StepOutcome {
+        match action {
+            Action::NotifyOnly => done(),
+            Action::Hide => unhide_app(target),
+            Action::Quit => skipped(keys::RESTORE_QUIT),
+            Action::Close | Action::Minimize => skipped(keys::RESTORE_UNSUPPORTED),
         }
     }
 }

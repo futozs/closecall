@@ -18,8 +18,8 @@ use closecall_core::{
 use objc2_application_services::AXError;
 use serde_json::Value;
 
-use super::{done, failed, fell_back, hide_instead, same_instance, skipped};
-use crate::apps::{self, RunningApp};
+use super::{done, failed, fell_back, hide_instead, same_instance, skipped, unhide_app};
+use crate::apps::{self, OpenError, RunningApp};
 use crate::ax::{self, Ax};
 use crate::doc::{self, CloseFacts, CloseRoute, DocApp};
 use crate::osa;
@@ -48,7 +48,7 @@ impl WindowProvider {
 }
 
 /// `Index` is the fallback when `_AXUIElementGetWindow` is unavailable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum WindowRef {
     Id(u32),
     Index(usize),
@@ -247,12 +247,29 @@ fn scan(last: &LastGood<i32>, deadline: Instant) -> Result<Vec<Discovered>, Prov
     Ok(found)
 }
 
-/// Hides the app when this is its only visible window, otherwise minimizes just this one.
-fn conceal(pid: i32, window: &WindowInfo, all: &[WindowInfo]) -> Option<Action> {
-    let others_visible = all
+/// Windows of the target's app instance (`AppRef` includes the pid) that the run acts on.
+fn planned_windows(target: &Target, planned: &[Target]) -> HashSet<WindowRef> {
+    planned
         .iter()
-        .any(|other| other.window != window.window && !other.minimized);
-    if !others_visible && apps::hide(pid) {
+        .filter(|other| other.provider == target.provider && other.app == target.app)
+        .filter_map(target_window)
+        .collect()
+}
+
+/// Hiding the app is right only when it hides nothing the run leaves alone.
+fn hides_whole_app(
+    own: WindowRef,
+    visible: impl IntoIterator<Item = WindowRef>,
+    planned: &HashSet<WindowRef>,
+) -> bool {
+    visible
+        .into_iter()
+        .all(|window| window == own || planned.contains(&window))
+}
+
+/// Hides the app when `whole_app` allows it, otherwise minimizes just this window.
+fn conceal(pid: i32, window: &WindowInfo, whole_app: bool) -> Option<Action> {
+    if whole_app && apps::hide(pid) {
         return Some(Action::Hide);
     }
     if window.ax.set_bool("AXMinimized", true) {
@@ -264,10 +281,10 @@ fn conceal(pid: i32, window: &WindowInfo, all: &[WindowInfo]) -> Option<Action> 
 fn conceal_instead(
     pid: i32,
     window: &WindowInfo,
-    all: &[WindowInfo],
+    whole_app: bool,
     reason_key: &str,
 ) -> StepOutcome {
-    conceal(pid, window, all).map_or_else(
+    conceal(pid, window, whole_app).map_or_else(
         || failed("could not conceal the window"),
         |action| fell_back(action, reason_key),
     )
@@ -309,7 +326,7 @@ struct SheetPolicy {
 fn answer_sheet(
     pid: i32,
     window: &WindowInfo,
-    all: &[WindowInfo],
+    whole_app: bool,
     found: &Ax,
     policy: SheetPolicy,
     deadline: Instant,
@@ -331,11 +348,11 @@ fn answer_sheet(
             if let Some(next) = sheet::find_sheet(&window.ax) {
                 press_cancel(&next, window);
             }
-            conceal_instead(pid, window, all, keys::SAVE_FAILED_HIDDEN)
+            conceal_instead(pid, window, whole_app, keys::SAVE_FAILED_HIDDEN)
         }
         SheetAnswer::CancelAndConceal(reason) => {
             press_cancel(found, window);
-            conceal_instead(pid, window, all, reason)
+            conceal_instead(pid, window, whole_app, reason)
         }
         SheetAnswer::CancelAndSkip(reason) => {
             press_cancel(found, window);
@@ -347,7 +364,7 @@ fn answer_sheet(
 fn press_close(
     pid: i32,
     window: &WindowInfo,
-    all: &[WindowInfo],
+    whole_app: bool,
     policy: SheetPolicy,
     deadline: Instant,
 ) -> StepOutcome {
@@ -356,7 +373,7 @@ fn press_close(
         .element("AXCloseButton")
         .is_some_and(|button| button.press());
     if !pressed {
-        return conceal_instead(pid, window, all, keys::CLOSE_FAILED);
+        return conceal_instead(pid, window, whole_app, keys::CLOSE_FAILED);
     }
     let sheet_deadline = deadline.min(Instant::now() + SHEET_WAIT);
     loop {
@@ -364,10 +381,10 @@ fn press_close(
             return done();
         }
         if let Some(found) = sheet::find_sheet(&window.ax) {
-            return answer_sheet(pid, window, all, &found, policy, deadline);
+            return answer_sheet(pid, window, whole_app, &found, policy, deadline);
         }
         if Instant::now() >= sheet_deadline {
-            return conceal_instead(pid, window, all, keys::CLOSE_FAILED);
+            return conceal_instead(pid, window, whole_app, keys::CLOSE_FAILED);
         }
         thread::sleep(POLL_STEP);
     }
@@ -406,6 +423,7 @@ struct CloseRequest<'a> {
     app: &'a RunningApp,
     window: &'a WindowInfo,
     all: &'a [WindowInfo],
+    whole_app: bool,
     policy: UnsavedPolicy,
     ctx: &'a ExecContext,
     deadline: Instant,
@@ -416,6 +434,7 @@ fn close(request: &CloseRequest<'_>) -> StepOutcome {
         app,
         window,
         all,
+        whole_app,
         policy,
         ctx,
         deadline,
@@ -439,10 +458,12 @@ fn close(request: &CloseRequest<'_>) -> StepOutcome {
     };
     let route = doc::close_route(policy, facts);
     let (dict_app, matched) = match (&route, docs.app, matched) {
-        (CloseRoute::Conceal(reason), ..) => return conceal_instead(pid, window, all, reason),
+        (CloseRoute::Conceal(reason), ..) => {
+            return conceal_instead(pid, window, whole_app, reason);
+        }
         (CloseRoute::Skip(reason), ..) => return skipped(reason),
         (CloseRoute::Button, ..) | (_, None, _) | (_, _, None) => {
-            return press_close(pid, window, all, sheet_policy, deadline);
+            return press_close(pid, window, whole_app, sheet_policy, deadline);
         }
         (_, Some(dict_app), Some(matched)) => (dict_app, matched),
     };
@@ -461,7 +482,7 @@ fn close(request: &CloseRequest<'_>) -> StepOutcome {
                 DocSelector::UntitledNamed(matched.name.clone()),
                 DocOp::SaveInto(dest),
             ),
-            None => return conceal_instead(pid, window, all, keys::SAVE_FAILED_HIDDEN),
+            None => return conceal_instead(pid, window, whole_app, keys::SAVE_FAILED_HIDDEN),
         },
     };
     let untitled = matches!(op, DocOp::SaveInto(_));
@@ -469,10 +490,10 @@ fn close(request: &CloseRequest<'_>) -> StepOutcome {
     match osa::run_in_app(dict_app.bundle_id, &script, deadline) {
         Ok(Value::String(result)) if result == "closed" => done(),
         Ok(Value::String(result)) if result == "unsaved" => {
-            conceal_instead(pid, window, all, keys::SAVE_FAILED_HIDDEN)
+            conceal_instead(pid, window, whole_app, keys::SAVE_FAILED_HIDDEN)
         }
-        _ if untitled => conceal_instead(pid, window, all, keys::UNTITLED_HIDDEN),
-        _ => press_close(pid, window, all, sheet_policy, deadline),
+        _ if untitled => conceal_instead(pid, window, whole_app, keys::UNTITLED_HIDDEN),
+        _ => press_close(pid, window, whole_app, sheet_policy, deadline),
     }
 }
 
@@ -545,10 +566,15 @@ impl Provider for WindowProvider {
         let Some(window) = all.iter().find(|w| w.window == wanted) else {
             return skipped(keys::TARGET_GONE);
         };
+        let whole_app = hides_whole_app(
+            window.window,
+            all.iter().filter(|w| !w.minimized).map(|w| w.window),
+            &planned_windows(target, &ctx.planned),
+        );
         match step.action {
             Action::Minimize if window.ax.set_bool("AXMinimized", true) => done(),
             Action::Minimize => hide_instead(app.pid, keys::WINDOW_UNREACHABLE),
-            Action::Hide => match conceal(app.pid, window, &all) {
+            Action::Hide => match conceal(app.pid, window, whole_app) {
                 Some(Action::Hide) => done(),
                 Some(action) => fell_back(action, keys::OTHER_WINDOWS_VISIBLE),
                 None => failed("could not conceal the window"),
@@ -557,10 +583,64 @@ impl Provider for WindowProvider {
                 app: &app,
                 window,
                 all: &all,
+                whole_app,
                 policy: step.on_unsaved,
                 ctx,
                 deadline,
             }),
+        }
+    }
+
+    fn restore(&mut self, target: &Target, action: Action, deadline: Instant) -> StepOutcome {
+        match action {
+            Action::NotifyOnly => done(),
+            Action::Hide => unhide_app(target),
+            Action::Minimize => unminimize(target),
+            Action::Close => reopen_document(target, deadline),
+            Action::Quit => skipped(keys::RESTORE_UNSUPPORTED),
+        }
+    }
+}
+
+fn unminimize(target: &Target) -> StepOutcome {
+    let Some(app) = same_instance(target) else {
+        return skipped(keys::NOT_RUNNING);
+    };
+    let Some(wanted) = target_window(target) else {
+        return failed("malformed window handle");
+    };
+    if !ax::is_trusted() {
+        return skipped(keys::ACCESSIBILITY_MISSING);
+    }
+    let Ok(windows) = read_windows(app.pid) else {
+        return failed("could not read the app's windows");
+    };
+    match windows.iter().find(|w| w.window == wanted) {
+        Some(window) if window.ax.set_bool("AXMinimized", false) => done(),
+        Some(_) => failed("could not unminimize the window"),
+        None => skipped(keys::TARGET_GONE),
+    }
+}
+
+/// Launch Services hands the file to the app that had it open, launching the app if it has
+/// quit since. A window that never had a file can't come back.
+fn reopen_document(target: &Target, deadline: Instant) -> StepOutcome {
+    let path = match &target.kind {
+        TargetKind::DocumentWindow(document) => document.path.as_deref(),
+        _ => None,
+    };
+    let Some(path) = path else {
+        return skipped(keys::RESTORE_NO_FILE);
+    };
+    if !Path::new(path).exists() {
+        return skipped(keys::RESTORE_FILE_MISSING);
+    }
+    match apps::open_with(path, &target.app.id, deadline) {
+        Ok(()) => done(),
+        Err(OpenError::NoSuchApp) => skipped(keys::RESTORE_UNSUPPORTED),
+        Err(OpenError::Timeout) => failed("the app did not confirm opening the document in time"),
+        Err(OpenError::Failed { domain, code }) => {
+            failed(format!("opening the document failed: {domain} {code}"))
         }
     }
 }
@@ -580,5 +660,59 @@ mod tests {
         assert_eq!(decode_handle("321"), None);
         assert_eq!(decode_handle("x:1"), None);
         assert_eq!(decode_handle("1:#x"), None);
+    }
+
+    fn window(pid: u32, window: WindowRef) -> Target {
+        poll::target(
+            ID,
+            closecall_core::AppRef {
+                id: "com.apple.Preview".into(),
+                name: "Preview".into(),
+                pid: Some(pid),
+            },
+            TargetKind::AppWindow(AppWindow {
+                window: Handle(encode_handle(pid.cast_signed(), window)),
+                title: String::new(),
+                minimized: false,
+            }),
+        )
+    }
+
+    #[test]
+    fn planned_windows_belong_to_the_same_app_instance() {
+        let own = window(7, WindowRef::Id(1));
+        let mut other_app = window(7, WindowRef::Id(5));
+        other_app.app.id = "com.apple.TextEdit".into();
+        let planned = [
+            own.clone(),
+            window(7, WindowRef::Id(2)),
+            window(7, WindowRef::Index(3)),
+            window(8, WindowRef::Id(4)),
+            other_app,
+        ];
+        assert_eq!(
+            planned_windows(&own, &planned),
+            HashSet::from([WindowRef::Id(1), WindowRef::Id(2), WindowRef::Index(3)])
+        );
+    }
+
+    #[test]
+    fn hides_the_app_only_when_every_visible_window_is_planned() {
+        let own = WindowRef::Id(1);
+        let planned = HashSet::from([own, WindowRef::Id(2)]);
+        assert!(hides_whole_app(own, [own, WindowRef::Id(2)], &planned));
+        assert!(!hides_whole_app(
+            own,
+            [own, WindowRef::Id(2), WindowRef::Id(3)],
+            &planned
+        ));
+        assert!(
+            hides_whole_app(own, [own], &HashSet::new()),
+            "the step's own window counts even when the engine plans nothing else"
+        );
+        assert!(
+            hides_whole_app(own, [WindowRef::Id(2)], &planned),
+            "an already minimized own window"
+        );
     }
 }

@@ -24,9 +24,11 @@ objc2.workspace = true
 objc2-foundation = { workspace = true, features = [
   "NSAppleEventDescriptor",
   "NSAppleScript",
+  "NSArray",
   "NSDate",
   "NSDictionary",
   "NSDistributedNotificationCenter",
+  "NSError",
   "NSNotification",
   "NSOperation",
   "NSString",
@@ -53,6 +55,8 @@ objc2-core-graphics = { workspace = true, features = [
   "CGDirectDisplay",
   "CGDisplayConfiguration",
   "CGError",
+  "CGEventSource",
+  "CGEventTypes",
   "libc",
 ] }
 objc2-io-kit = { workspace = true, features = ["libc"] }

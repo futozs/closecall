@@ -17,7 +17,11 @@ Implements the `crates/core` platform traits for macOS 14+. Depends only on `clo
   never by localized title. The Hungarian system language is a first-class target.
 - Read dirty state from the window's `AXCloseButton` `AXEdited`; trust only `true`. AppleScript
   `modified`/`saved` comes first where a dictionary exists.
-- Hide an app only if every visible window of it matches; otherwise act per window. Never `forceTerminate()`.
+- Hide an app only if every visible window of it is in `ExecContext.planned`; otherwise act per window. Never `forceTerminate()`.
+- AX observers live on their own thread with its own `CFRunLoop` (`observe.rs`): the engine blocks
+  the provider thread on a channel, so that thread's run loop never spins. Polling stays the fallback.
+- Restore never launches an app, except Launch Services opening a closed document in its app. Private
+  tabs, and Safari tabs (privacy unknown), are never reopened.
 - SkyLight symbols go through `dlopen`/`dlsym` and fail open: a missing symbol is
   `SourceHealth::Unavailable`, not a crash ([ADR-0010](../../docs/decisions/0010-skylight-share-detection.md)).
 - Report capabilities honestly: `Support::Partial { note_key }` with a key that exists in `locales/`.

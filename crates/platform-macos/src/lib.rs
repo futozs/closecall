@@ -14,7 +14,11 @@ mod doc;
 #[cfg(target_os = "macos")]
 mod firefox_session;
 #[cfg(target_os = "macos")]
+mod idle;
+#[cfg(target_os = "macos")]
 pub mod keys;
+#[cfg(target_os = "macos")]
+mod observe;
 #[cfg(target_os = "macos")]
 mod osa;
 #[cfg(target_os = "macos")]
@@ -35,6 +39,8 @@ pub use platform::MacPlatform;
 
 #[cfg(target_os = "macos")]
 mod platform {
+    use std::time::Duration;
+
     use closecall_core::platform::{PermissionBroker, Platform, Provider, SignalSource};
 
     use crate::permissions::MacPermissions;
@@ -80,6 +86,10 @@ mod platform {
 
         fn permissions(&self) -> Box<dyn PermissionBroker> {
             Box::new(MacPermissions)
+        }
+
+        fn idle_clock(&self) -> Box<dyn Fn() -> Option<Duration> + Send + Sync> {
+            Box::new(crate::idle::since_last_input)
         }
     }
 }

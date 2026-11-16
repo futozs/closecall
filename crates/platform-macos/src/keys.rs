@@ -17,6 +17,11 @@ pub const CLOSE_UNSUPPORTED: &str = "macos.reason.close_unsupported";
 pub const UNSUPPORTED: &str = "macos.reason.unsupported";
 pub const NOT_RUNNING: &str = "macos.reason.app_not_running";
 pub const TARGET_GONE: &str = "macos.reason.target_gone";
+pub const RESTORE_UNSUPPORTED: &str = "reason.restore_unsupported";
+pub const RESTORE_PRIVATE: &str = "reason.restore_private";
+pub const RESTORE_QUIT: &str = "reason.restore_quit";
+pub const RESTORE_NO_FILE: &str = "macos.reason.restore_no_file";
+pub const RESTORE_FILE_MISSING: &str = "macos.reason.restore_file_missing";
 
 pub const NOTE_HIDES_WHOLE_APP: &str = "macos.note.hides_whole_app";
 pub const NOTE_HIDE_OR_MINIMIZE: &str = "macos.note.hide_or_minimize";

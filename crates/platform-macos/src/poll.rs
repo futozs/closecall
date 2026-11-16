@@ -13,6 +13,9 @@ use closecall_core::{AppRef, ProviderId, Target, TargetId, TargetKind};
 
 pub(crate) const INTERVAL: Duration = Duration::from_secs(2);
 const SCAN_BUDGET: Duration = Duration::from_secs(5);
+/// A page that rewrites its title every second wakes the poller constantly; scans still
+/// leave the app this much room.
+const MIN_GAP: Duration = Duration::from_millis(300);
 
 /// The engine owns `id` and `first_seen_ms`; providers leave them zeroed.
 pub(crate) fn target(provider: &str, app: AppRef, kind: TargetKind) -> Target {
@@ -80,8 +83,9 @@ impl Drop for Poller {
     }
 }
 
-/// Scans every `INTERVAL`, or sooner when `wake` fires (app launched or quit). A failed scan
-/// keeps the previous state, so a busy app doesn't look like it closed everything.
+/// Scans every `INTERVAL`, or sooner when `wake` fires (an app launched or quit, a browser
+/// window changed title). A failed scan keeps the previous state, so a busy app doesn't look
+/// like it closed everything.
 pub(crate) fn spawn(
     provider: ProviderId,
     wake: Receiver<()>,
@@ -95,7 +99,8 @@ pub(crate) fn spawn(
         .spawn(move || {
             let mut known = HashMap::new();
             while !stopped.load(Ordering::Relaxed) {
-                match scan(Instant::now() + SCAN_BUDGET) {
+                let started = Instant::now();
+                match scan(started + SCAN_BUDGET) {
                     Ok(found) => {
                         for event in diff(&provider, &mut known, found) {
                             if !events.send(event) {
@@ -106,7 +111,10 @@ pub(crate) fn spawn(
                     Err(error) => tracing::debug!(provider = %provider.0, %error, "scan failed"),
                 }
                 match wake.recv_timeout(INTERVAL) {
-                    Ok(()) => while wake.try_recv().is_ok() {},
+                    Ok(()) => {
+                        thread::sleep(MIN_GAP.saturating_sub(started.elapsed()));
+                        while wake.try_recv().is_ok() {}
+                    }
                     Err(RecvTimeoutError::Timeout) => {}
                     Err(RecvTimeoutError::Disconnected) => thread::sleep(INTERVAL),
                 }

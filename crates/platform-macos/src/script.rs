@@ -125,11 +125,90 @@ pub(crate) fn chromium_tab_info(window: &ScriptId, tab: &ScriptId) -> String {
     ))
 }
 
-pub(crate) fn chromium_close_tab(window: &ScriptId, tab: &ScriptId) -> String {
+/// Another planned tab of the same window. It is closed in the same call only while its
+/// title and URL are what the plan was made from, which stands in for its own reverify.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ChromiumPeer<'a> {
+    pub id: ScriptId,
+    pub title: &'a str,
+    pub url: Option<&'a str>,
+}
+
+/// Closes `tab`, then every unchanged peer. Returns one boolean per peer.
+pub(crate) fn chromium_close_tabs(
+    window: &ScriptId,
+    tab: &ScriptId,
+    peers: &[ChromiumPeer<'_>],
+) -> String {
+    let entries = peers
+        .iter()
+        .map(|peer| {
+            format!(
+                "{{{}, {}, {}}}",
+                peer.id.literal(),
+                quote(peer.title),
+                optional_text(peer.url)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
     format!(
-        "close (tab id {} of window id {})\nreturn \"closed\"",
-        tab.literal(),
-        window.literal()
+        "set w to window id {wid}\n\
+         close (tab id {tid} of w)\n\
+         set out to {{}}\n\
+         repeat with p in {{{entries}}}\n\
+         set q to contents of p\n\
+         set r to false\n\
+         try\n\
+         set x to tab id (item 1 of q) of w\n\
+         considering case\n\
+         if (title of x) is (item 2 of q) and (URL of x) is (item 3 of q) then set r to true\n\
+         end considering\n\
+         if r then close x\n\
+         end try\n\
+         set end of out to r\n\
+         end repeat\n\
+         return out",
+        wid = window.literal(),
+        tid = tab.literal(),
+    )
+}
+
+/// Never into an incognito window: the tab came from the normal profile, with its cookies
+/// and history. Prefers the tab's own window, then any normal one, then a new one.
+pub(crate) fn chromium_reopen(window: Option<&ScriptId>, url: &str) -> String {
+    let own_window = window.map_or_else(String::new, |window| {
+        format!(
+            "try\n\
+             set c to window id {}\n\
+             if mode of c is \"normal\" then set w to c\n\
+             end try\n",
+            window.literal()
+        )
+    });
+    format!(
+        "set u to {url}\n\
+         set w to missing value\n\
+         {own_window}\
+         if w is missing value then\n\
+         repeat with wid in (get id of every window)\n\
+         set c to window id (contents of wid)\n\
+         try\n\
+         if mode of c is \"normal\" then\n\
+         set w to c\n\
+         exit repeat\n\
+         end if\n\
+         end try\n\
+         end repeat\n\
+         end if\n\
+         if w is missing value then\n\
+         set w to make new window with properties {{mode:\"normal\"}}\n\
+         set URL of active tab of w to u\n\
+         else\n\
+         make new tab at end of tabs of w with properties {{URL:u}}\n\
+         end if\n\
+         return \"opened\"",
+        url = quote(url),
     )
 }
 
@@ -176,8 +255,86 @@ pub(crate) fn safari_tab_info(window: &ScriptId, index: usize, url: Option<&str>
     )
 }
 
-pub(crate) fn safari_close_tab(window: &ScriptId, index: usize, url: Option<&str>) -> String {
-    safari_find(window, index, url, "close tab i of w\nreturn \"closed\"")
+/// A Safari tab to close, by its index at scan time and its URL. `title` is checked for the
+/// other planned tabs of the window (see [`ChromiumPeer`]) and is `None` for the step's
+/// own tab, which the engine has just reverified.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SafariTab<'a> {
+    pub index: usize,
+    pub url: Option<&'a str>,
+    pub title: Option<&'a str>,
+}
+
+/// Finds every tab first, each at most once, and closes from the right so the indexes of
+/// tabs still to close don't shift. Returns the index each entry was found at, 0 if not.
+pub(crate) fn safari_close_tabs(window: &ScriptId, tabs: &[SafariTab<'_>]) -> String {
+    let entries = tabs
+        .iter()
+        .map(|tab| {
+            format!(
+                "{{{}, {}, {}}}",
+                tab.index,
+                optional_text(tab.url),
+                optional_text(tab.title)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "set w to window id {wid}\n\
+         set n to count of tabs of w\n\
+         set picked to {{}}\n\
+         set out to {{}}\n\
+         considering case\n\
+         repeat with p in {{{entries}}}\n\
+         set q to contents of p\n\
+         set k to item 1 of q\n\
+         set u to item 2 of q\n\
+         set t to item 3 of q\n\
+         set i to 0\n\
+         if k <= n and picked does not contain k then\n\
+         if URL of tab k of w is u then set i to k\n\
+         end if\n\
+         if i is 0 then\n\
+         repeat with j from 1 to n\n\
+         if picked does not contain j then\n\
+         if URL of tab j of w is u then\n\
+         set i to j\n\
+         exit repeat\n\
+         end if\n\
+         end if\n\
+         end repeat\n\
+         end if\n\
+         if i > 0 and t is not missing value then\n\
+         if name of tab i of w is not t then set i to 0\n\
+         end if\n\
+         if i > 0 then set end of picked to i\n\
+         set end of out to i\n\
+         end repeat\n\
+         end considering\n\
+         repeat with j from n to 1 by -1\n\
+         if picked contains j then close tab j of w\n\
+         end repeat\n\
+         return out",
+        wid = window.literal(),
+    )
+}
+
+/// The index each tab of [`safari_close_tabs`] was closed at, `None` where it wasn't found.
+pub(crate) fn parse_safari_closed(value: &Value, expected: usize) -> Option<Vec<Option<usize>>> {
+    let items = value.as_array().filter(|items| items.len() == expected)?;
+    Some(items.iter().map(index).collect())
+}
+
+/// Whether each peer of [`chromium_close_tabs`] was closed.
+pub(crate) fn parse_chromium_closed(value: &Value, expected: usize) -> Option<Vec<bool>> {
+    let items = value.as_array().filter(|items| items.len() == expected)?;
+    Some(
+        items
+            .iter()
+            .map(|item| item.as_bool() == Some(true))
+            .collect(),
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -513,21 +670,121 @@ mod tests {
 
     #[test]
     fn safari_scripts_compare_against_the_quoted_url() {
-        let script = safari_close_tab(&ScriptId::Int(5), 3, Some("https://bank.example/?a=\"1\""));
+        let script = safari_close_tabs(
+            &ScriptId::Int(5),
+            &[SafariTab {
+                index: 3,
+                url: Some("https://bank.example/?a=\"1\""),
+                title: None,
+            }],
+        );
         assert!(script.contains("window id 5"));
-        assert!(script.contains(r#""https://bank.example/?a=\"1\"""#));
-        assert!(script.contains("close tab i of w"));
+        assert!(script.contains(r#"{3, "https://bank.example/?a=\"1\"", missing value}"#));
         let blank = safari_tab_info(&ScriptId::Int(5), 1, None);
         assert!(blank.contains("is missing value"));
     }
 
     #[test]
+    fn safari_batch_finds_every_tab_before_closing_from_the_right() {
+        let script = safari_close_tabs(
+            &ScriptId::Int(5),
+            &[
+                SafariTab {
+                    index: 2,
+                    url: Some("https://a/"),
+                    title: None,
+                },
+                SafariTab {
+                    index: 4,
+                    url: Some("https://b/"),
+                    title: Some("Bank"),
+                },
+            ],
+        );
+        assert!(script.contains(
+            r#"repeat with p in {{2, "https://a/", missing value}, {4, "https://b/", "Bank"}}"#
+        ));
+        assert!(script.contains("picked does not contain j"));
+        let find = script.find("end considering").unwrap();
+        let close = script.find("close tab j of w").unwrap();
+        assert!(find < close, "nothing closes before every tab is found");
+        assert!(script.contains("repeat with j from n to 1 by -1"));
+        assert!(script.contains("name of tab i of w is not t"));
+    }
+
+    #[test]
     fn chromium_scripts_address_tabs_by_id() {
-        let script = chromium_close_tab(&ScriptId::Text("w1".into()), &ScriptId::Text("t1".into()));
-        assert!(script.contains(r#"close (tab id "t1" of window id "w1")"#));
+        let script = chromium_close_tabs(
+            &ScriptId::Text("w1".into()),
+            &ScriptId::Text("t1".into()),
+            &[],
+        );
+        assert!(script.contains(r#"set w to window id "w1""#));
+        assert!(script.contains(r#"close (tab id "t1" of w)"#));
+        assert!(script.contains("repeat with p in {}"));
         let info = chromium_tab_info(&ScriptId::Int(1), &ScriptId::Int(2));
         assert!(info.contains("tab id 2 of window id 1"));
         assert!(info.contains("-1728"));
+    }
+
+    #[test]
+    fn chromium_batch_closes_peers_only_while_unchanged() {
+        let script = chromium_close_tabs(
+            &ScriptId::Int(1),
+            &ScriptId::Int(10),
+            &[
+                ChromiumPeer {
+                    id: ScriptId::Int(11),
+                    title: "Bank \"x\"",
+                    url: Some("https://bank.example/"),
+                },
+                ChromiumPeer {
+                    id: ScriptId::Text("t-12".into()),
+                    title: "Mail",
+                    url: None,
+                },
+            ],
+        );
+        assert!(script.contains(
+            r#"{{11, "Bank \"x\"", "https://bank.example/"}, {"t-12", "Mail", missing value}}"#
+        ));
+        let own = script.find("close (tab id 10 of w)").unwrap();
+        let peers = script.find("repeat with p in").unwrap();
+        assert!(own < peers);
+        assert!(script.contains("considering case"));
+        assert!(script.contains("if r then close x"));
+    }
+
+    #[test]
+    fn parses_batch_results_and_rejects_mismatched_lengths() {
+        assert_eq!(
+            parse_chromium_closed(&json!([true, false]), 2),
+            Some(vec![true, false])
+        );
+        assert_eq!(parse_chromium_closed(&json!([true]), 2), None);
+        assert_eq!(parse_chromium_closed(&json!(null), 0), None);
+        assert_eq!(
+            parse_safari_closed(&json!([3, 0]), 2),
+            Some(vec![Some(3), None])
+        );
+        assert_eq!(parse_safari_closed(&json!("closed"), 1), None);
+    }
+
+    #[test]
+    fn chromium_reopen_prefers_a_normal_window_and_never_an_incognito_one() {
+        let script = chromium_reopen(Some(&ScriptId::Int(3)), "https://a.example/?q=\"x\"");
+        assert!(script.starts_with(r#"set u to "https://a.example/?q=\"x\"""#));
+        let own = script.find("set c to window id 3").unwrap();
+        let any = script.find("get id of every window").unwrap();
+        let new = script
+            .find(r#"make new window with properties {mode:"normal"}"#)
+            .unwrap();
+        assert!(own < any && any < new);
+        assert_eq!(script.matches(r#"if mode of c is "normal""#).count(), 2);
+        assert!(!script.contains("incognito"));
+        assert!(script.contains("make new tab at end of tabs of w with properties {URL:u}"));
+        let without_window = chromium_reopen(None, "https://a.example/");
+        assert!(!without_window.contains("try\nset c to window id"));
     }
 
     const OFFICE: DocDictionary = DocDictionary {

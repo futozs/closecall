@@ -41,6 +41,10 @@ impl Ax {
         Self(element)
     }
 
+    pub(crate) fn raw(&self) -> &AXUIElement {
+        &self.0
+    }
+
     fn copy(&self, attribute: &str) -> Result<CFRetained<CFType>, AXError> {
         let name = CFString::from_str(attribute);
         let mut value: *const CFType = ptr::null();

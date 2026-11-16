@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::time::Instant;
 
 use closecall_core::platform::{
@@ -7,15 +7,15 @@ use closecall_core::platform::{
 };
 use closecall_core::{
     Action, BrowserFamily, BrowserTab, Capability, Handle, ProviderId, Step, StepOutcome, Target,
-    TargetKind, Tri, UrlQuality,
+    TargetId, TargetKind, Tri, UrlQuality,
 };
-use serde_json::Value;
 
-use super::{done, failed, hide_app, hide_instead, same_instance, skipped};
+use super::{TabBatch, done, failed, hide_app, hide_instead, same_instance, skipped, unhide_app};
 use crate::apps::{self, RunningApp};
+use crate::observe::{self, Observer};
 use crate::osa::{self, OsaError};
 use crate::poll::{self, LastGood, Poller};
-use crate::script::{self, ScriptId, ScriptWindow};
+use crate::script::{self, SafariTab, ScriptId, ScriptWindow};
 use crate::{automation, caps, keys};
 
 pub(crate) const ID: &str = "macos.safari";
@@ -23,6 +23,8 @@ pub(crate) const ID: &str = "macos.safari";
 pub(crate) struct SafariProvider {
     last: Arc<LastGood<i32>>,
     poller: Option<Poller>,
+    observer: Option<Observer>,
+    batch: TabBatch,
 }
 
 impl SafariProvider {
@@ -30,6 +32,8 @@ impl SafariProvider {
         Self {
             last: Arc::new(LastGood::new()),
             poller: None,
+            observer: None,
+            batch: TabBatch::default(),
         }
     }
 }
@@ -86,22 +90,67 @@ fn location(tab: &BrowserTab) -> Option<(ScriptId, usize)> {
     Some((ScriptId::decode(&tab.window.0)?, tab.tab.0.parse().ok()?))
 }
 
-fn close_tab(pid: i32, tab: &BrowserTab, deadline: Instant) -> StepOutcome {
+fn peer(target: &Target) -> Option<(TargetId, SafariTab<'_>)> {
+    let TargetKind::BrowserTab(tab) = &target.kind else {
+        return None;
+    };
+    Some((
+        target.id,
+        SafariTab {
+            index: tab.tab.0.parse().ok()?,
+            url: tab.url.as_deref(),
+            title: Some(&tab.title),
+        },
+    ))
+}
+
+/// Closes the tab and the given peers of its window in one script. Returns the outcome for
+/// the tab and the peers that were closed with it.
+fn close_tabs(
+    pid: i32,
+    tab: &BrowserTab,
+    peers: &[&Target],
+    deadline: Instant,
+) -> (StepOutcome, Vec<TargetId>) {
     if !automation::granted(caps::SAFARI) {
-        return hide_instead(pid, keys::AUTOMATION_MISSING);
+        return (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new());
     }
     let Some((window, index)) = location(tab) else {
-        return failed("malformed tab handle");
+        return (failed("malformed tab handle"), Vec::new());
     };
-    let script = script::safari_close_tab(&window, index, tab.url.as_deref());
+    let own = SafariTab {
+        index,
+        url: tab.url.as_deref(),
+        title: None,
+    };
+    let (peer_ids, peers): (Vec<TargetId>, Vec<SafariTab<'_>>) =
+        peers.iter().filter_map(|target| peer(target)).unzip();
+    let tabs: Vec<SafariTab<'_>> = std::iter::once(own).chain(peers).collect();
+    let script = script::safari_close_tabs(&window, &tabs);
     match osa::run_in_app(caps::SAFARI, &script, deadline) {
-        Ok(Value::String(result)) if result == "closed" => done(),
-        Ok(_) => skipped(keys::TARGET_GONE),
+        Ok(value) => {
+            let found = script::parse_safari_closed(&value, tabs.len()).unwrap_or_default();
+            let Some((own_found, peers_found)) = found.split_first() else {
+                return (skipped(keys::TARGET_GONE), Vec::new());
+            };
+            let closed = peer_ids
+                .into_iter()
+                .zip(peers_found)
+                .filter_map(|(id, at)| at.map(|_| id))
+                .collect();
+            let outcome = if own_found.is_some() {
+                done()
+            } else {
+                skipped(keys::TARGET_GONE)
+            };
+            (outcome, closed)
+        }
+        Err(error) if error.is_missing_object() => (skipped(keys::TARGET_GONE), Vec::new()),
         Err(OsaError::NotPermitted | OsaError::NeedsConsent) => {
             automation::forget(caps::SAFARI);
-            hide_instead(pid, keys::AUTOMATION_MISSING)
+            (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new())
         }
-        Err(_) => hide_instead(pid, keys::CLOSE_FAILED),
+        Err(_) => (hide_instead(pid, keys::CLOSE_FAILED), Vec::new()),
     }
 }
 
@@ -115,13 +164,13 @@ impl Provider for SafariProvider {
     }
 
     fn start(&mut self, events: Box<dyn EventSender<InventoryEvent>>) -> Result<(), ProviderError> {
+        let (wake, wakes) = mpsc::channel();
+        apps::notify_launches(wake.clone());
+        self.observer = Some(observe::spawn(ID, vec![caps::SAFARI], wake)?);
         let last = Arc::clone(&self.last);
-        self.poller = Some(poll::spawn(
-            self.id(),
-            apps::launches(),
-            events,
-            move |deadline| Ok(scan(&last, deadline)),
-        )?);
+        self.poller = Some(poll::spawn(self.id(), wakes, events, move |deadline| {
+            Ok(scan(&last, deadline))
+        })?);
         Ok(())
     }
 
@@ -133,6 +182,10 @@ impl Provider for SafariProvider {
         let TargetKind::BrowserTab(tab) = &target.kind else {
             return Reverify::Gone;
         };
+        // See the Chromium provider.
+        if self.batch.was_closed_ahead(target.id) {
+            return Reverify::Same;
+        }
         let (Some(_), Some((window, index))) = (same_instance(target), location(tab)) else {
             return Reverify::Gone;
         };
@@ -159,20 +212,40 @@ impl Provider for SafariProvider {
         &mut self,
         step: &Step,
         target: &Target,
-        _ctx: &ExecContext,
+        ctx: &ExecContext,
         deadline: Instant,
     ) -> StepOutcome {
         let TargetKind::BrowserTab(tab) = &target.kind else {
             return skipped(keys::UNSUPPORTED);
         };
+        self.batch.acted(target.id);
+        if step.action == Action::Close && self.batch.take_closed_ahead(target.id) {
+            return done();
+        }
         let Some(app) = same_instance(target) else {
             return skipped(keys::NOT_RUNNING);
         };
         match step.action {
             Action::NotifyOnly => done(),
             Action::Hide => hide_app(app.pid),
-            Action::Close => close_tab(app.pid, tab, deadline),
+            Action::Close => {
+                let peers = self.batch.peers(target, &ctx.planned);
+                let (outcome, closed) = close_tabs(app.pid, tab, &peers, deadline);
+                self.batch.closed(closed);
+                outcome
+            }
             Action::Minimize | Action::Quit => skipped(keys::UNSUPPORTED),
+        }
+    }
+
+    /// Safari can't tell private windows apart, so no tab is reopened: it might have been
+    /// private. Safari's own History → Reopen Last Closed Tab can.
+    fn restore(&mut self, target: &Target, action: Action, _deadline: Instant) -> StepOutcome {
+        match action {
+            Action::NotifyOnly => done(),
+            Action::Hide => unhide_app(target),
+            Action::Close => skipped(keys::RESTORE_PRIVATE),
+            Action::Minimize | Action::Quit => skipped(keys::RESTORE_UNSUPPORTED),
         }
     }
 }

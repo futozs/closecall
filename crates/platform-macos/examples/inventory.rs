@@ -52,6 +52,7 @@ fn main() {
     }
     let mut report = json!({
         "platform": platform.name(),
+        "idle_ms": platform.idle_clock()().map(|idle| idle.as_millis()),
         "permissions": platform.permissions().status(),
         "providers": providers,
     });

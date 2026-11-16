@@ -1,9 +1,9 @@
 //! Running applications through `NSWorkspace` / `NSRunningApplication`. No permission needed.
 
 use std::ptr::NonNull;
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Mutex, Once, PoisonError};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use block2::RcBlock;
 use closecall_core::AppRef;
@@ -11,8 +11,9 @@ use objc2::rc::{Retained, autoreleasepool};
 use objc2_app_kit::{
     NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace,
     NSWorkspaceDidLaunchApplicationNotification, NSWorkspaceDidTerminateApplicationNotification,
+    NSWorkspaceOpenConfiguration,
 };
-use objc2_foundation::{NSNotification, NSString, NSURL};
+use objc2_foundation::{NSArray, NSError, NSNotification, NSString, NSURL};
 
 pub(crate) const OWN_BUNDLE_ID: &str = "hu.futozs.closecall";
 
@@ -115,8 +116,14 @@ pub(crate) fn launched_at(pid: i32) -> Option<SystemTime> {
     })
 }
 
+/// True when the app is hidden afterwards, also when it already was: a run hides one app
+/// once per planned window.
 pub(crate) fn hide(pid: i32) -> bool {
-    autoreleasepool(|_| running(pid).is_some_and(|app| app.hide()))
+    autoreleasepool(|_| running(pid).is_some_and(|app| app.isHidden() || app.hide()))
+}
+
+pub(crate) fn unhide(pid: i32) -> bool {
+    autoreleasepool(|_| running(pid).is_some_and(|app| !app.isHidden() || app.unhide()))
 }
 
 /// Polite quit: the app may still ask about unsaved documents. Never `forceTerminate`.
@@ -130,6 +137,48 @@ pub(crate) fn is_installed(bundle_id: &str) -> bool {
             .URLForApplicationWithBundleIdentifier(&NSString::from_str(bundle_id))
             .is_some()
     })
+}
+
+/// Domain and code only: the localized description names the file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum OpenError {
+    NoSuchApp,
+    Failed { domain: String, code: isize },
+    Timeout,
+}
+
+/// Opens a file with the app that has `bundle_id`, launching it if needed, and waits for
+/// Launch Services to confirm until `deadline`.
+pub(crate) fn open_with(path: &str, bundle_id: &str, deadline: Instant) -> Result<(), OpenError> {
+    let (sender, receiver) = mpsc::channel();
+    autoreleasepool(|_| {
+        let workspace = NSWorkspace::sharedWorkspace();
+        let app = workspace
+            .URLForApplicationWithBundleIdentifier(&NSString::from_str(bundle_id))
+            .ok_or(OpenError::NoSuchApp)?;
+        let file = NSURL::fileURLWithPath(&NSString::from_str(path));
+        let done = RcBlock::new(move |_: *mut NSRunningApplication, error: *mut NSError| {
+            // SAFETY: Launch Services passes either null or a valid `NSError` for the
+            // duration of the call.
+            let error = unsafe { error.as_ref() }.map(|error| OpenError::Failed {
+                domain: error.domain().to_string(),
+                code: error.code(),
+            });
+            let _ = sender.send(error);
+        });
+        workspace.openURLs_withApplicationAtURL_configuration_completionHandler(
+            &NSArray::from_retained_slice(&[file]),
+            &app,
+            &NSWorkspaceOpenConfiguration::configuration(),
+            Some(&done),
+        );
+        Ok(())
+    })?;
+    match receiver.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+        Ok(None) => Ok(()),
+        Ok(Some(error)) => Err(error),
+        Err(RecvTimeoutError::Timeout | RecvTimeoutError::Disconnected) => Err(OpenError::Timeout),
+    }
 }
 
 pub(crate) fn open_url(url: &str) -> bool {
@@ -146,12 +195,16 @@ static OBSERVING: Once = Once::new();
 /// thread, so they only arrive while the main run loop runs (it does inside the app).
 pub(crate) fn launches() -> Receiver<()> {
     let (sender, receiver) = mpsc::channel();
+    notify_launches(sender);
+    receiver
+}
+
+pub(crate) fn notify_launches(sender: Sender<()>) {
     SUBSCRIBERS
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .push(sender);
     OBSERVING.call_once(observe_launches);
-    receiver
 }
 
 fn observe_launches() {

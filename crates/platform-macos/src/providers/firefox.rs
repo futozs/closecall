@@ -11,7 +11,7 @@ use closecall_core::{
     TargetKind, Tri, UrlQuality,
 };
 
-use super::{done, hide_app, hide_instead, same_instance, skipped};
+use super::{done, hide_app, hide_instead, same_instance, skipped, unhide_app};
 use crate::apps::{self, RunningApp};
 use crate::firefox_session::{self, SessionTab};
 use crate::poll::{self, LastGood, Poller};
@@ -169,6 +169,14 @@ impl Provider for FirefoxProvider {
             // audience; hiding the app is the honest fallback.
             Action::Close => hide_instead(app.pid, keys::CLOSE_UNSUPPORTED),
             Action::Minimize | Action::Quit => skipped(keys::UNSUPPORTED),
+        }
+    }
+
+    fn restore(&mut self, target: &Target, action: Action, _deadline: Instant) -> StepOutcome {
+        match action {
+            Action::NotifyOnly => done(),
+            Action::Hide => unhide_app(target),
+            Action::Close | Action::Minimize | Action::Quit => skipped(keys::RESTORE_UNSUPPORTED),
         }
     }
 }
