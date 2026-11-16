@@ -315,6 +315,30 @@ fn except_removes_matches() {
 }
 
 #[test]
+fn capturing_app_protects_its_windows_but_not_its_tabs() {
+    let mut f = Fixture::new();
+    f.protect_apps = vec![AppSelector::BundleId("com.google.Chrome".to_owned())];
+    let snapshot = [
+        tab("https://bank.example/", "Bank").private().with_id(1),
+        app_window("com.google.Chrome", "Google Chrome", "Meet").with_id(2),
+    ];
+    let rules = [panic_rule(
+        "everything",
+        Matcher::Any(vec![
+            Matcher::Private,
+            Matcher::App(AppSelector::BundleId("com.google.Chrome".to_owned())),
+        ]),
+    )];
+    let planned: Vec<u64> = f
+        .plan(&FiredTrigger::Panic, &snapshot, &rules)
+        .steps
+        .iter()
+        .map(|step| step.target.0)
+        .collect();
+    assert_eq!(planned, vec![1]);
+}
+
+#[test]
 fn protection_always_wins() {
     let mut f = Fixture::new();
     f.protect.domains = vec!["example.com".to_owned()];

@@ -397,6 +397,7 @@ name = "closecall-app"
 version = "0.1.0"
 dependencies = [
  "closecall-core",
+ "closecall-engine",
  "serde",
  "serde_json",
  "tauri",
@@ -410,8 +411,6 @@ dependencies = [
  "globset",
  "insta",
  "proptest",
- "psl",
- "regex",
  "schemars 1.2.3",
  "serde",
  "serde_json",
@@ -427,6 +426,14 @@ name = "closecall-engine"
 version = "0.1.0"
 dependencies = [
  "closecall-core",
+ "closecall-lists",
+ "closecall-platform-fake",
+ "closecall-platform-linux",
+ "closecall-platform-macos",
+ "closecall-platform-windows",
+ "crossbeam-channel",
+ "thiserror 2.0.21",
+ "tracing",
 ]
 
 [[package]]

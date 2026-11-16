@@ -2,4 +2,4 @@
 import type { FiredTrigger } from "./FiredTrigger";
 import type { StepReport } from "./StepReport";
 
-export type RunReport = { run_id: bigint, at_ms: bigint, trigger: FiredTrigger, dry_run: boolean, steps: Array<StepReport>, restorable: boolean, };
+export type RunReport = { run_id: number, at_ms: number, trigger: FiredTrigger, dry_run: boolean, steps: Array<StepReport>, restorable: boolean, };

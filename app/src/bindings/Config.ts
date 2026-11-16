@@ -6,4 +6,8 @@ import type { Language } from "./Language";
 import type { Protect } from "./Protect";
 import type { Rule } from "./Rule";
 
-export type Config = { version: number, language: Language, panic_hotkey: string | null, share_min_confidence: Confidence, untitled_save_dir: string, restore_window: Dur, protect: Protect, categories: Array<CategoryDef>, rule: Array<Rule>, };
+export type Config = { version: number, language: Language, 
+/**
+ * Empty means no hotkey: TOML has no null, so `None` would come back as the default.
+ */
+panic_hotkey: string, share_min_confidence: Confidence, untitled_save_dir: string, restore_window: Dur, protect: Protect, categories: Array<CategoryDef>, rule: Array<Rule>, };

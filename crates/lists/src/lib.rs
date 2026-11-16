@@ -61,6 +61,7 @@ impl Lists {
                 CategoryInfo {
                     id: def.id.clone(),
                     builtin: categories::find(&def.id.0).is_some(),
+                    default_enabled: Self::default_enabled(&def.id),
                     domain_count: def.domains.len() as u32
                         + sources.iter().map(|source| source.entries).sum::<u32>(),
                     app_count: def.apps.len() as u32,

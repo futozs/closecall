@@ -14,12 +14,13 @@ use crate::{
 pub const CONFIG_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 #[ts(export)]
 pub struct Config {
     pub version: u32,
     pub language: Language,
-    pub panic_hotkey: Option<String>,
+    /// Empty means no hotkey: TOML has no null, so `None` would come back as the default.
+    pub panic_hotkey: String,
     pub share_min_confidence: Confidence,
     pub untitled_save_dir: String,
     pub restore_window: Dur,
@@ -35,7 +36,7 @@ impl Default for Config {
         Self {
             version: CONFIG_VERSION,
             language: Language::System,
-            panic_hotkey: Some("Ctrl+Alt+Shift+B".to_owned()),
+            panic_hotkey: "Ctrl+Alt+Shift+B".to_owned(),
             share_min_confidence: Confidence::Medium,
             untitled_save_dir: "~/Documents/Close Call".to_owned(),
             restore_window: Dur::from_hours(2),
@@ -58,7 +59,7 @@ pub enum Language {
 
 /// Targets that are never touched, whatever the rules say. Protection always wins.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 #[ts(export)]
 pub struct Protect {
     pub categories: Vec<CategoryId>,

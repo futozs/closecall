@@ -15,10 +15,8 @@
       "default": "system"
     },
     "panic_hotkey": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "description": "Empty means no hotkey: TOML has no null, so `None` would come back as the default.",
+      "type": "string",
       "default": "Ctrl+Alt+Shift+B"
     },
     "protect": {
@@ -59,6 +57,7 @@
       "minimum": 0
     }
   },
+  "additionalProperties": false,
   "$defs": {
     "Action": {
       "type": "string",
@@ -171,7 +170,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "CategoryId": {
       "type": "string"
@@ -411,7 +411,8 @@
           "type": "boolean",
           "default": false
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Rule": {
       "type": "object",
@@ -468,6 +469,7 @@
           }
         }
       },
+      "additionalProperties": false,
       "required": [
         "id",
         "when",

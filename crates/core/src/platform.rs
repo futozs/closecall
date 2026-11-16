@@ -6,12 +6,12 @@
 //!   block; it registers observers on the main run loop or spawns its own threads.
 
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Capability, Confidence, ProviderId, Step, StepOutcome, Target};
+use crate::{Action, Capability, Confidence, ProviderId, Step, StepOutcome, Target};
 
 pub trait EventSender<T>: Send {
     /// Returns `false` when the receiving side is gone and the source should stop.
@@ -52,6 +52,9 @@ pub enum ProviderError {
 pub struct ExecContext {
     /// Already expanded; may not exist yet.
     pub untitled_save_dir: PathBuf,
+    /// Every target this provider acts on in the current run, so it can hide a whole app
+    /// instead of minimizing its windows one by one, or close tabs in one call per window.
+    pub planned: Vec<Target>,
 }
 
 pub trait Provider: Send {
@@ -68,6 +71,14 @@ pub trait Provider: Send {
         ctx: &ExecContext,
         deadline: Instant,
     ) -> StepOutcome;
+    /// Undo a step this provider performed: reopen a closed tab or document, unhide an app.
+    /// `target` is the state captured before the step ran.
+    fn restore(&mut self, target: &Target, action: Action, deadline: Instant) -> StepOutcome {
+        let _ = (target, action, deadline);
+        StepOutcome::Skipped {
+            reason_key: "reason.restore_unsupported".to_owned(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
@@ -157,6 +168,8 @@ pub enum RequestOutcome {
     Granted,
     Denied,
     OpenedSettings,
+    /// macOS can only ask for Automation consent while the target app runs.
+    AppNotRunning,
     NotApplicable,
 }
 
@@ -170,4 +183,8 @@ pub trait Platform {
     fn providers(&self) -> Vec<Box<dyn Provider>>;
     fn signal_sources(&self) -> Vec<Box<dyn SignalSource>>;
     fn permissions(&self) -> Box<dyn PermissionBroker>;
+    /// Time since the last keyboard or mouse input, for `IdleLongerThan`.
+    fn idle_clock(&self) -> Box<dyn Fn() -> Option<Duration> + Send + Sync> {
+        Box::new(|| None)
+    }
 }

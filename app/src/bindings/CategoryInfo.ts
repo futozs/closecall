@@ -2,4 +2,4 @@
 import type { CategoryId } from "./CategoryId";
 import type { ListSource } from "./ListSource";
 
-export type CategoryInfo = { id: CategoryId, builtin: boolean, domain_count: number, app_count: number, keyword_count: number, sources: Array<ListSource>, };
+export type CategoryInfo = { id: CategoryId, builtin: boolean, default_enabled: boolean, domain_count: number, app_count: number, keyword_count: number, sources: Array<ListSource>, };

@@ -1,5 +1,5 @@
 use crate::config::Protect;
-use crate::matcher::{CategoryIndex, MatchContext, evaluate, matches};
+use crate::matcher::{CategoryIndex, MatchContext, app_matches, evaluate, matches};
 use crate::{
     Action, AppSelector, Capability, Confirm, Evidence, FiredTrigger, Matcher, Phase, Plan, Reason,
     Rule, Step, Support, Target, TargetKind, TargetKindTag, Tri, Trigger, UnsavedPolicy,
@@ -62,7 +62,15 @@ pub fn plan(
                 .iter()
                 .filter_map(|rule| select(rule, target, &match_ctx).map(|ev| (*rule, ev)))
                 .collect();
-            if hits.is_empty() || is_protected(target, &protected, ctx.protect, &match_ctx) {
+            if hits.is_empty()
+                || is_protected(
+                    target,
+                    &protected,
+                    ctx.protect,
+                    ctx.protect_apps,
+                    &match_ctx,
+                )
+            {
                 return None;
             }
             Some(step(target, hits, ctx.capabilities))
@@ -93,14 +101,7 @@ fn protection_matcher(ctx: &PlanContext<'_>) -> Matcher {
             .cloned()
             .map(Matcher::Category)
             .chain(protect.domains.iter().cloned().map(Matcher::Domain))
-            .chain(
-                protect
-                    .apps
-                    .iter()
-                    .chain(ctx.protect_apps)
-                    .cloned()
-                    .map(Matcher::App),
-            )
+            .chain(protect.apps.iter().cloned().map(Matcher::App))
             .collect(),
     )
 }
@@ -109,13 +110,21 @@ fn is_protected(
     target: &Target,
     protected: &Matcher,
     protect: &Protect,
+    run_apps: &[AppSelector],
     ctx: &MatchContext<'_>,
 ) -> bool {
-    if let TargetKind::BrowserTab(tab) = &target.kind
-        && ((protect.audible_tabs && tab.audible == Tri::Yes)
-            || (protect.pinned_tabs && tab.pinned == Tri::Yes))
-    {
-        return true;
+    match &target.kind {
+        TargetKind::BrowserTab(tab) => {
+            if (protect.audible_tabs && tab.audible == Tri::Yes)
+                || (protect.pinned_tabs && tab.pinned == Tri::Yes)
+            {
+                return true;
+            }
+        }
+        // The capturing app is protected as a whole, but its tabs are not: when Meet runs in
+        // Chrome, the bank tab next to it must still close.
+        _ if run_apps.iter().any(|app| app_matches(app, target)) => return true,
+        _ => {}
     }
     matches(protected, target, ctx)
 }

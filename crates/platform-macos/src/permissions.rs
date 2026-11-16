@@ -73,7 +73,7 @@ impl PermissionBroker for MacPermissions {
                 automation::forget(bundle_id);
                 match automation::status(bundle_id, false) {
                     PermissionStatus::Granted => RequestOutcome::Granted,
-                    PermissionStatus::AppNotRunning => RequestOutcome::NotApplicable,
+                    PermissionStatus::AppNotRunning => RequestOutcome::AppNotRunning,
                     // A denied app is never asked again; only System Settings can change it.
                     PermissionStatus::Denied => {
                         apps::open_url(AUTOMATION_SETTINGS);

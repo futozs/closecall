@@ -4,4 +4,4 @@ import type { RunSummary } from "./RunSummary";
 import type { ShareState } from "./ShareState";
 import type { SignalSourceStatus } from "./SignalSourceStatus";
 
-export type Status = { platform: string, app_version: string, share: ShareState, guard_active: boolean, paused_until_ms: bigint | null, last_run: RunSummary | null, permissions: Array<PermissionState>, signal_sources: Array<SignalSourceStatus>, needs_onboarding: boolean, };
+export type Status = { platform: string, app_version: string, share: ShareState, guard_active: boolean, paused_until_ms: number | null, last_run: RunSummary | null, permissions: Array<PermissionState>, signal_sources: Array<SignalSourceStatus>, needs_onboarding: boolean, };

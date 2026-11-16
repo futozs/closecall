@@ -19,6 +19,7 @@ rust-version = "1.99"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/futozs/closecall"
 authors = ["futozs"]
+publish = false
 
 [workspace.dependencies]
 closecall-core = { path = "crates/core" }

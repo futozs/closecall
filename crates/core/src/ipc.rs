@@ -47,6 +47,7 @@ pub struct Status {
     pub app_version: String,
     pub share: ShareState,
     pub guard_active: bool,
+    #[ts(type = "number | null")]
     pub paused_until_ms: Option<u64>,
     pub last_run: Option<RunSummary>,
     pub permissions: Vec<PermissionState>,
@@ -73,7 +74,9 @@ pub struct SignalSourceStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct RunSummary {
+    #[ts(type = "number")]
     pub run_id: u64,
+    #[ts(type = "number")]
     pub at_ms: u64,
     pub trigger: FiredTrigger,
     pub done: u32,
@@ -85,7 +88,9 @@ pub struct RunSummary {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct RunReport {
+    #[ts(type = "number")]
     pub run_id: u64,
+    #[ts(type = "number")]
     pub at_ms: u64,
     pub trigger: FiredTrigger,
     pub dry_run: bool,
@@ -130,6 +135,7 @@ pub struct CapabilityReport {
 pub struct CategoryInfo {
     pub id: CategoryId,
     pub builtin: bool,
+    pub default_enabled: bool,
     pub domain_count: u32,
     pub app_count: u32,
     pub keyword_count: u32,

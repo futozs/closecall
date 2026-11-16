@@ -33,8 +33,7 @@ exceptions = []
 
 [bans]
 multiple-versions = "warn"
-# allow-wildcard-paths only exempts crates with `publish = false`; switch to "deny" once every workspace crate sets it.
-wildcards = "warn"
+wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 # The no-network guarantee (architecture §12): no HTTP, WebSocket, QUIC or TLS stack may enter the graph.

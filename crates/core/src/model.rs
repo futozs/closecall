@@ -28,7 +28,7 @@ pub struct RuleId(pub String);
 pub struct CategoryId(pub String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
-#[ts(export)]
+#[ts(export, type = "number")]
 pub struct TargetId(pub u64);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
@@ -147,11 +147,10 @@ pub enum Evidence {
     FileGlob { glob: String },
     DocKind { doc_kind: DocKind },
     Private,
-    OpenLongerThan { threshold: Dur },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, TS, JsonSchema)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 #[ts(export)]
 pub struct CategoryDef {
     pub id: CategoryId,
@@ -210,6 +209,7 @@ pub enum TargetKindTag {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[ts(export)]
 pub struct Rule {
     pub id: RuleId,
@@ -242,6 +242,7 @@ pub struct Target {
     pub provider: ProviderId,
     pub app: AppRef,
     /// Engine monotonic clock; item age restarts when the app restarts.
+    #[ts(type = "number")]
     pub first_seen_ms: u64,
     pub kind: TargetKind,
 }

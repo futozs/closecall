@@ -8,4 +8,4 @@ export type Target = { id: TargetId, provider: ProviderId, app: AppRef,
 /**
  * Engine monotonic clock; item age restarts when the app restarts.
  */
-first_seen_ms: bigint, kind: TargetKind, };
+first_seen_ms: number, kind: TargetKind, };

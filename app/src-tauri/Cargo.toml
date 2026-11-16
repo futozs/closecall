@@ -7,6 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
+publish.workspace = true
 
 [lib]
 name = "closecall_app_lib"
@@ -17,6 +18,7 @@ tauri-build.workspace = true
 
 [dependencies]
 closecall-core.workspace = true
+closecall-engine.workspace = true
 tauri.workspace = true
 serde.workspace = true
 serde_json.workspace = true

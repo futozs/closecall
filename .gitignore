@@ -11,3 +11,6 @@ node_modules/
 /test-results/
 .claude/settings.local.json
 .claude/worktrees/
+
+# Playwright writes these on every run; curated copies live in docs/screenshots.
+/app/tests/screenshots/
