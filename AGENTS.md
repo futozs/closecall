@@ -64,6 +64,8 @@ cargo deny check                         # licences + banned network crates
 bun x biome check .                      # lint + format for TS/JSON
 bun x vitest run                         # UI unit tests (from app/)
 bun x playwright test                    # UI tests against the web build with mocked IPC (from app/)
+bun scripts/ci/check-i18n.ts             # en and hu have the same keys
+bun scripts/ci/check-message-keys.ts     # every key Rust can emit has text in both
 ```
 
 `cargo build -p closecall-platform-macos` and `-p closecall-app` build the non-default members.

@@ -32,7 +32,7 @@ The editor fetches that URL, not Close Call. Point it at a local copy of the sch
 | `panic_hotkey` | string | `"Ctrl+Alt+Shift+B"` | Global hotkey for the panic trigger (⌃⌥⇧B on macOS). |
 | `share_min_confidence` | `"low"`, `"medium"`, `"high"` | `"medium"` | Weakest screen-share signal that fires `screen_share` rules. Low signals only start the pre-flight check. |
 | `untitled_save_dir` | path | `"~/Documents/Close Call"` | Where never-saved documents are saved under `save_then_close`, when the app allows it. |
-| `restore_window` | duration | `"2h"` | How long closed items can be restored. The list is kept in memory only. |
+| `restore_window` | duration | `"2h"` | How long closed items can be restored. The list is kept in memory only. After this, Activity keeps what happened but forgets titles, URLs, paths and the matching evidence. |
 | `[protect]` | table | see below | Things never touched, whatever the rules say. |
 | `[ignore]` | table | see below | Screen capture and displays that never count as a share or a projector. |
 | `[[categories]]` | array of tables | none | Your own categories, next to the built-in ones. |
@@ -118,7 +118,7 @@ Built-in categories: `adult`, `banking`, `webmail`, `medical`, `password_manager
 | `except` | matcher | none | Matches here are left alone. |
 | `action` | action | required | What to do. |
 | `on_unsaved` | unsaved policy | `"save_then_close"` | What to do with unsaved documents when the action is `close` or `quit`. |
-| `confirm` | `"never"` or `{ countdown = "60s" }` | `"never"` | A countdown with "Keep" and "Do it now". |
+| `confirm` | `"never"` or `{ countdown = "60s" }` | `"never"` | Wait this long before acting. For an `idle_longer_than` rule, keyboard or mouse input during the wait calls it off. There is no "Keep" or "Do it now" button yet, and no notice while it waits. |
 
 ### Triggers
 
@@ -185,7 +185,12 @@ notify only) and the most careful unsaved policy wins (hide > skip_and_notify > 
 The app rejects a config with problems instead of running half of it, and lists each problem with
 the rule and field. For example, `confirm = { countdown = … }` is allowed only on rules armed by
 `idle_longer_than` or `item_open_longer_than`: on a share, a projector, the lid or a lock there is no
-time to ask, and the dialog would appear on the shared screen.
+time to wait.
+
+If `config.toml` can't be read or parsed, was written by a newer version, or has problems, Close Call
+leaves the file as it is, runs the recommended preset instead, and says so in a banner at the top of
+the settings window (and in `closecall diag`). Fix the file and restart, or change something in the
+window: the first save then keeps your file as `config.rejected.toml` next to the new `config.toml`.
 
 ## Examples
 

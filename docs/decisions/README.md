@@ -15,6 +15,7 @@ so nobody has to rediscover it from the code.
 | [0008](0008-name-close-call.md) | The name "Close Call" | accepted |
 | [0009](0009-bundled-plain-text-lists.md) | Bundled plain-text lists, no runtime downloads | accepted |
 | [0010](0010-skylight-share-detection.md) | Private SkyLight API for macOS share detection, failing open | accepted |
+| [0011](0011-ignore-list-share-ui-display-connected.md) | Ignore list for always-on capture and own monitors, sharing-bar detection, `display_connected` | proposed |
 
 ## Writing one
 

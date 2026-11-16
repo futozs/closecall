@@ -8,10 +8,13 @@ reporter and no update check. It never opens a network connection, and you can c
 | What | Why | How (macOS) |
 |---|---|---|
 | Running apps and their windows, window titles | To find sensitive items | NSWorkspace, Accessibility |
+| Running apps including background agents (bundle ids and names) | To offer and apply the ignore list of always-on screen capturers, such as a DisplayLink dock | NSWorkspace |
 | The file behind a document window, and whether it has unsaved changes | Rules by path or file type; not losing work | Accessibility, AppleScript |
 | Browser tab titles and URLs, and whether a window is private | Rules by site; private windows count as sensitive | AppleScript per browser; the Firefox session file |
 | Screen-share, display, lock, sleep, lid and idle state | Triggers | System notifications, IOKit, CoreGraphics, a private SkyLight call |
-| Whether the microphone or camera is in use, and by which app | "A call is likely" pre-flight | CoreAudio, CoreMediaIO |
+| Which app owns each on-screen window, and its layer and position (no titles, no pixels); for a window shaped like a sharing bar but out of its usual place, its title | Recognising the sharing bars of meeting apps and browsers | `CGWindowList`, Accessibility |
+| Connected displays: name, EDID vendor, model and serial number, built-in or mirrored | Projector detection and the ignore list for your own monitors | CoreGraphics, NSScreen |
+| Whether the default microphone is in use (not by which app) | "A call is likely" pre-flight | CoreAudio |
 
 It does not read page contents, messages, the contents of your files, your screen pixels, keystrokes
 or browsing history. (The planned v0.6 image classifier, off by default, would read image files that
@@ -23,12 +26,20 @@ for Screen Recording, Input Monitoring or Full Disk Access.
 | Data | Where | Contains titles, URLs or paths? | Kept |
 |---|---|---|---|
 | `config.toml` | App config directory, see [docs/config.md](docs/config.md) | Your rules; may name sites or folders you consider sensitive | Until you delete it |
-| Imported list files | App data directory | Domains | Until you remove them |
+| `config.rejected.toml` | Next to `config.toml` | Your earlier rules | Written once, when you save over a `config.toml` that could not be used; until you delete it |
 | Restore list of closed items | **Memory only** | Yes | Until you restore, quit, or the restore window ends (2 hours by default) |
-| Hidden-apps marker | App data directory | No: bundle ids only | Until restored; lets the next launch unhide apps after a crash |
-| Logs | App log directory | **No**, unless you turn on diagnostic mode, which warns you and switches itself off after 24 hours | 7 days |
+| Activity history (the last 50 runs) | **Memory only** | Yes, until the run's restore window ends; then only the kind of item, the app and what happened | Until quit |
 | When each item was first seen | Memory only | No | Until quit; item age restarts when the app restarts |
+| Logs | Standard error only (no log file); a launch agent started at login sends it nowhere | **No**: rule ids, counts and outcomes | Not kept |
+| Login item, when "Open at login" is on | `~/Library/LaunchAgents/`, a plist with the app's path | No | Until you turn it off |
+| Single-instance socket | `/tmp/hu_futozs_closecall_si.sock` while the app runs | No; a second launch sends its command-line arguments through it | Removed on quit |
 | Untitled documents saved under the default unsaved policy | `~/Documents/Close Call` (configurable) | They are your documents | Until you delete them |
+
+Not implemented yet: importing your own list files, a marker that lets the next launch unhide apps
+after a crash (until then, unhide them from the Dock or the app switcher), and a diagnostic log mode.
+The single-instance socket sits in the shared `/tmp`, a limit of the Tauri plugin; on a Mac with
+other local users, one of them could create that socket first and receive the arguments of your
+launch.
 
 Titles, URLs and paths appear only inside the Close Call window. Notifications show counts ("2 tabs
 closed, 1 document hidden"), never what was closed, because they may show up on a shared screen.
@@ -36,14 +47,15 @@ closed, 1 document hidden"), never what was closed, because they may show up on 
 ## What leaves your computer
 
 Nothing. Close Call never opens an internet socket, not even to localhost. Lists of sensitive sites
-ship inside the app and change only with a new release or a file you import.
+ship inside the app and change only with a new release.
 
 Things outside our control:
 
 - The system webview (WKWebView, WebView2, WebKitGTK) is part of your OS and updates itself. Close
   Call loads only files bundled with the app.
 - macOS may check the app's signature with Apple at launch (Gatekeeper). That is the OS.
-- Links you click in the app (the source code, the releases page) open in your own browser.
+- Links you click in the app (the source code, the releases page, the source of a bundled list) open
+  in your own browser.
 - From v0.4, the optional browser extension lives in a browser that uses the network. The extension
   itself makes no requests and talks to the app only over a local pipe.
 

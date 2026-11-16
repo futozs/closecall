@@ -26,7 +26,22 @@ Latency is from share start to the last conceal or close step, in milliseconds, 
 | AirPlay mirroring | | | | | | |
 | HDMI projector | | | | | | |
 | Sidecar | | | | | | |
-| DisplayLink dock (expect a false positive, marked Noisy) | | | | | | |
+| DisplayLink dock with DisplayLink on the ignore list (expect no share, watcher marked Unreliable) | | | | | | |
+| Zoom share while the DisplayLink dock is attached (caught by the sharing bar) | | | | | | |
+
+### Sharing bars (`macos.share_ui`)
+
+Run `cargo run -p closecall-platform-macos --example share_ui 30` during each share and note the
+cue it saw (layer, size, position) so the thresholds in `signals/share_ui.rs` can be tuned.
+
+| Share | Cue seen | Starts within 2 s | Ends within 4 s after stopping |
+|---|---|---|---|
+| Zoom (whole screen; `CptHost` only while sharing?) | | | |
+| Meet in Chrome, Edge, Brave, Arc, Helium | | | |
+| Teams | | | |
+| Slack huddle | | | |
+| Webex | | | |
+| Discord (no known cue) | | | |
 
 ### Browsers
 
@@ -37,9 +52,14 @@ Latency is from share start to the last conceal or close step, in milliseconds, 
 | Edge | | | | | |
 | Vivaldi | | | | | |
 | Arc | | | | | |
+| Helium | | | | | |
 | Safari | | | | | |
 | Firefox (session file, hide only) | | | | | |
-| Opera (hide only) | | | | | |
+| Opera, Dia (no tab provider; only app windows) | | | | | |
+
+Also check: a notify-only tab next to a closed tab in the same window stays open; a tab that navigated
+to a meeting site just before the close is left open; with a meeting tab in the same browser, a Hide
+rule skips with "protected" instead of hiding the browser.
 
 ### Documents and unsaved policies
 
@@ -55,6 +75,10 @@ Latency is from share start to the last conceal or close step, in milliseconds, 
 | PowerPoint | | | | | | | | |
 | Acrobat Reader | | | | | | | | |
 
+Also: a Terminal window whose title matches a document rule shows "Terminate running processes?"
+and must be cancelled and hidden, never terminated. A window with a Print or Export sheet already
+open must be hidden without touching the sheet.
+
 Any data loss in this table blocks the release.
 
 ### Other triggers
@@ -63,12 +87,12 @@ Any data loss in this table blocks the release.
 |---|---|---|---|---|---|
 | Panic hotkey | | | | | |
 | Lid closed | | | | | |
-| Will sleep | | | | | |
+| Will sleep (the run is not waited for; does it finish before sleep?) | | | | | |
 | Locked | | | | | |
 | Away longer than N (fires before unlock) | | | | | |
 | Idle longer than N | | | | | |
-| Item open longer than N (countdown) | | | | | |
-| Call likely (mic or camera in a meeting app) | | | | | |
+| Item open longer than N (silent wait, no Keep button) | | | | | |
+| Call likely (default microphone in use) | | | | | |
 
 ### Spikes to settle
 
@@ -77,7 +101,7 @@ Any data loss in this table blocks the release.
 | Do AX and Apple Events work while the screen is locked? | | |
 | Are Safari private windows enumerable, and can we tell them apart? | | |
 | Does `NSRunningApplication.hide()` work on other apps without a TCC grant? | | |
-| `SLSRegisterNotifyProc` callback signature | | |
+| `SLSRegisterNotifyProc` callback signature, and the event number that carries per-process capture data | | |
 | Minimum macOS version for per-process mic attribution | | |
 | Opera and Dia AppleScript support | | |
 | Office for Mac `close … saving` syntax | | |

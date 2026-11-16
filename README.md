@@ -33,7 +33,9 @@ follows in v0.2 and Linux in v0.3. [docs/status.md](docs/status.md) says what wo
 projector or mirrored display connects. The lid closes or the machine goes to sleep. The screen locks,
 or you have been away longer than N minutes. You have been idle for N minutes. A sensitive item has
 been open longer than N hours. Or you press the panic hotkey (⌃⌥⇧B on macOS, Ctrl+Alt+Shift+B
-elsewhere), use the tray menu, or run `closecall panic`.
+elsewhere), use the tray menu, or run `closecall panic`. Apps that capture the screen all day to
+drive a monitor, such as a DisplayLink dock, and your own desk monitors go on an ignore list, so they
+never count as a share or a projector.
 
 **Rules.** Each rule says which triggers arm it, which kinds of things it may touch (browser tabs,
 document windows, app windows, processes) and what counts as sensitive: a built-in category
@@ -52,16 +54,16 @@ the app allows it, and is hidden where it does not. If the app cannot tell wheth
 changes, Close Call assumes there are. It never fills in a Save dialog and never force-quits. Per rule
 you can choose to hide instead, leave the document open and notify, or (explicitly) discard.
 
-Closed tabs and documents can be restored for two hours; that list is kept in memory only. Every run
-answers "why was this closed?" in the Close Call window, and a dry run shows what would happen
-without touching anything.
+Closed tabs and documents can be restored for two hours; that list is kept in memory only, and after
+those two hours the history forgets which tab or file it was. Every run answers "why was this
+closed?" in the Close Call window, and a dry run shows what would happen without touching anything.
 
 The design in more detail: [docs/architecture.md](docs/architecture.md).
 
 ## Privacy
 
 Close Call never opens a network connection. No telemetry, no accounts, no crash reporter, no update
-checks. The site lists ship with the app and change only with a release or a file you import. Window
+checks. The site lists ship with the app and change only with a release. Window
 titles, URLs and file paths are never written to logs or shown in notifications. Details:
 [PRIVACY.md](PRIVACY.md).
 
