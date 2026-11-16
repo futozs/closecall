@@ -89,8 +89,14 @@ impl State {
             .is_some_and(|until| until > now.unix_ms)
     }
 
+    /// Automatic triggers stay off until the user has finished onboarding: a fresh install must
+    /// not act on rules nobody has agreed to yet. Panic always works.
+    pub fn automatic_off(&self, now: Now) -> bool {
+        self.needs_onboarding || self.paused(now)
+    }
+
     pub fn guard_active(&self, now: Now) -> bool {
-        !self.paused(now) && !self.fusion.guard_triggers(&self.config).is_empty()
+        !self.automatic_off(now) && !self.fusion.guard_triggers(&self.config).is_empty()
     }
 
     pub fn next_run_id(&mut self) -> u64 {
@@ -398,7 +404,7 @@ impl Core {
         let now = self.now();
         let out = {
             let mut state = lock(&self.state);
-            let paused = state.paused(now);
+            let paused = state.automatic_off(now);
             let out = state
                 .fusion
                 .on_signal(signal, ignored_by, now, &config, paused);
@@ -451,7 +457,7 @@ impl Core {
         let now = self.now();
         let out = {
             let mut state = lock(&self.state);
-            let paused = state.paused(now);
+            let paused = state.automatic_off(now);
             let mut out = Outcome::default();
             for (source, ignored_by) in attributed {
                 out.merge(
@@ -488,7 +494,7 @@ impl Core {
     fn sweep_new_guards(&self, out: &mut Outcome) {
         let now = self.now();
         let mut state = lock(&self.state);
-        let current = if state.paused(now) {
+        let current = if state.automatic_off(now) {
             Vec::new()
         } else {
             state.fusion.guard_triggers(&state.config)
@@ -514,7 +520,7 @@ impl Core {
             {
                 state.paused_until_ms = None;
             }
-            let paused = state.paused(now);
+            let paused = state.automatic_off(now);
             let config = Arc::clone(&state.config);
             let mut out = state.fusion.on_tick(now, &config, paused);
             let ages = state.index.ages();
@@ -559,14 +565,14 @@ impl Core {
             .flatten();
         if poll_idle && let Some(idle) = idle {
             let mut state = lock(&self.state);
-            let paused = state.paused(now);
+            let paused = state.automatic_off(now);
             let config = Arc::clone(&state.config);
             out.fire
                 .extend(state.fusion.on_idle(idle, now, &config, paused).fire);
         }
         self.apply(out);
         for pending in due {
-            if lock(&self.state).paused(now) {
+            if lock(&self.state).automatic_off(now) {
                 continue;
             }
             let back_at_keyboard = matches!(pending.fired, FiredTrigger::Idle { .. })
@@ -592,7 +598,7 @@ impl Core {
         let now = self.now();
         let (triggers, mut scope) = {
             let state = lock(&self.state);
-            if state.paused(now) {
+            if state.automatic_off(now) {
                 return;
             }
             let triggers = state.fusion.guard_triggers(&state.config);

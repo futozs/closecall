@@ -127,8 +127,13 @@ pub struct Harness {
 }
 
 impl Harness {
-    /// The demo inventory and the recommended preset, with no config file on disk.
+    /// The demo inventory and the recommended preset, saved as if onboarding was finished.
     pub fn demo() -> Self {
+        Self::with_config(&Config::recommended())
+    }
+
+    /// A fresh install: the demo inventory and no config file on disk yet.
+    pub fn fresh() -> Self {
         Self::start(Setup::default())
     }
 

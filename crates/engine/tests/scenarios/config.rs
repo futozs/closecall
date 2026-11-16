@@ -11,7 +11,7 @@ use crate::harness::{Harness, Setup};
 
 #[test]
 fn needs_onboarding_until_the_first_save() {
-    let h = Harness::demo();
+    let h = Harness::fresh();
     assert!(h.engine.status().needs_onboarding);
     assert_eq!(h.engine.config(), Config::recommended());
     assert!(h.config_on_disk().is_none());
@@ -30,6 +30,21 @@ fn needs_onboarding_until_the_first_save() {
     let on_disk = h.config_on_disk().expect("written");
     assert_eq!(Config::from_toml(&on_disk).expect("valid"), config);
     assert_eq!(h.engine.config(), config);
+}
+
+#[test]
+fn nothing_runs_automatically_before_onboarding_but_panic_does() {
+    let h = Harness::fresh();
+    h.engine.settle();
+    h.share(Confidence::High, None);
+    assert!(
+        !h.touched("chrome-otp"),
+        "a fresh install must not act on a share"
+    );
+    assert!(!h.engine.status().guard_active);
+
+    h.engine.panic();
+    assert!(h.closed("chrome-otp"), "panic works before onboarding");
 }
 
 #[test]
@@ -130,7 +145,7 @@ fn concurrent_saves_leave_one_whole_file() {
 
 #[test]
 fn reset_returns_a_preset_without_saving() {
-    let h = Harness::demo();
+    let h = Harness::fresh();
     assert_eq!(
         h.engine.reset_config(Preset::Empty).expect("preset"),
         Config::default()

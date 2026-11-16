@@ -28,7 +28,8 @@ the `close()` logo with the DMG install window ([ADR-0012](decisions/0012-logo-c
   activity forgets titles, URLs, paths and evidence after the restore window; a rejected
   `config.toml` shows a banner and is kept as `config.rejected.toml` on the first save; concurrent
   saves leave one whole file; permission requests return `not_while_sharing` during a share and never
-  block the engine; a cold-start panic waits up to 3 s for the inventory.
+  block the engine; a cold-start panic waits up to 3 s for the inventory; until onboarding has
+  saved a config, automatic triggers are off and only panic acts.
 
 ## Unverified on a device
 

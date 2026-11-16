@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use closecall_core::Confidence;
+use closecall_core::config::Config;
 use closecall_core::ipc::{RunReport, Status};
 use closecall_core::platform::SignalKind;
 use closecall_engine::{Engine, EngineOptions, EngineSettings, EngineSink, ManualClock, Notice};
@@ -109,6 +110,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             ..EngineOptions::default()
         },
     )?;
+    // Saving the preset is what finishing onboarding does; until then nothing runs automatically.
+    let issues = engine.save_config(Config::recommended())?;
+    if !issues.is_empty() {
+        return Err(format!("the recommended preset did not validate: {issues:?}").into());
+    }
     engine.start_signals();
     engine.settle();
 
