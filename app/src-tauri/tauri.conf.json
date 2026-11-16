@@ -33,15 +33,30 @@
     "targets": "all",
     "category": "Utility",
     "shortDescription": "Closes the sensitive tabs and documents you left open before anyone sees your screen.",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "macOS": {
       "minimumSystemVersion": "14.0",
       "entitlements": "./Entitlements.plist",
       "dmg": {
         "background": "./dmg/background.tiff",
-        "windowSize": { "width": 660, "height": 428 },
-        "appPosition": { "x": 180, "y": 170 },
-        "applicationFolderPosition": { "x": 480, "y": 170 }
+        "windowSize": {
+          "width": 660,
+          "height": 428
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
       },
       "files": {
         "Resources/en.lproj/InfoPlist.strings": "./en.lproj/InfoPlist.strings",
