@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 400" width="660" height="400">
+  <rect width="660" height="400" fill="#F2EDE4"/>
+  <g transform="translate(330 170) scale(0.47) translate(-512 -512)">
+    <path d="M399 193A472.3 472.3 0 0 0 399 831L481 831A827 827 0 0 1 481 193Z" transform="translate(-460 0)" fill="#15171C" fill-opacity="0.07"/>
+    <path d="M625 193A472.3 472.3 0 0 1 625 831L543 831A827 827 0 0 0 543 193Z" transform="translate(460 0)" fill="#FF5A36" fill-opacity="0.2"/>
+  </g>
+  <g fill="none" stroke="#15171C" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M272 170H386"/>
+    <path d="M377 161L386 170L377 179"/>
+  </g>
+  <text x="330" y="318" text-anchor="middle" font-family="Helvetica Neue" font-size="13" fill="#15171C" fill-opacity="0.72">Drag Close Call into Applications to install it.</text>
+  <text x="330" y="340" text-anchor="middle" font-family="Helvetica Neue" font-size="11" fill="#15171C" fill-opacity="0.45">Free software under GPL-3.0. It never connects to the internet.</text>
+</svg>

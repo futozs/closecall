@@ -23,12 +23,15 @@ function Svg({ className = "size-4", children }: IconProps & { children: ReactNo
 }
 
 export function Mark({ className = "size-7" }: IconProps) {
+  // Pixel-hinted 32 px drawing of the app icon; brand colours are fixed, not themed.
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false" className={className}>
-      <rect width="32" height="32" rx="7" className="fill-ink" />
-      <circle cx="16" cy="16" r="8.2" fill="none" strokeWidth="1.9" className="stroke-bg" />
-      <path d="M7.8 16a8.2 8.2 0 0 1 16.4 0z" className="fill-signal" />
-      <rect x="6.9" y="15.5" width="18.2" height="1.1" rx="0.55" className="fill-bg" />
+      <path
+        d="M11.94 3H20.06C22.63 3 23.92 3 25.31 3.44C26.82 3.99 28.01 5.18 28.56 6.69C29 8.08 29 9.37 29 11.94V20.06C29 22.63 29 23.92 28.56 25.31C28.01 26.82 26.82 28.01 25.31 28.56C23.92 29 22.63 29 20.06 29H11.94C9.37 29 8.08 29 6.69 28.56C5.18 28.01 3.99 26.82 3.44 25.31C3 23.92 3 22.63 3 20.06V11.94C3 9.37 3 8.08 3.44 6.69C3.99 5.18 5.18 3.99 6.69 3.44C8.08 3 9.37 3 11.94 3Z"
+        fill="#15171C"
+      />
+      <path d="M12 6A14.5 14.5 0 0 0 12 26L15 26A26 26 0 0 1 15 6Z" fill="#F2EDE4" />
+      <path d="M20 6A14.5 14.5 0 0 1 20 26L17 26A26 26 0 0 0 17 6Z" fill="#FF5A36" />
     </svg>
   );
 }
