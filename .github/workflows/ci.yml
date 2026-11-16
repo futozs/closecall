@@ -167,3 +167,5 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - run: bun scripts/ci/check-i18n.ts
+      - name: Every key Rust can emit has text
+        run: bun scripts/ci/check-message-keys.ts
