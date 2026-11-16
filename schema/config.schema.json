@@ -1,0 +1,561 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Config",
+  "type": "object",
+  "properties": {
+    "categories": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CategoryDef"
+      }
+    },
+    "language": {
+      "$ref": "#/$defs/Language",
+      "default": "system"
+    },
+    "panic_hotkey": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "Ctrl+Alt+Shift+B"
+    },
+    "protect": {
+      "$ref": "#/$defs/Protect",
+      "default": {
+        "apps": [],
+        "audible_tabs": false,
+        "categories": [
+          "meeting"
+        ],
+        "domains": [],
+        "pinned_tabs": false
+      }
+    },
+    "restore_window": {
+      "$ref": "#/$defs/Duration",
+      "default": "2h"
+    },
+    "rule": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Rule"
+      }
+    },
+    "share_min_confidence": {
+      "$ref": "#/$defs/Confidence",
+      "default": "medium"
+    },
+    "untitled_save_dir": {
+      "type": "string",
+      "default": "~/Documents/Close Call"
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint32",
+      "default": 1,
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "Action": {
+      "type": "string",
+      "enum": [
+        "close",
+        "hide",
+        "minimize",
+        "quit",
+        "notify_only"
+      ]
+    },
+    "AppSelector": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "bundle_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "bundle_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "exe": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "exe"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "desktop_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "desktop_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        }
+      ]
+    },
+    "CategoryDef": {
+      "type": "object",
+      "properties": {
+        "apps": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AppSelector"
+          }
+        },
+        "domains": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "file_globs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "$ref": "#/$defs/CategoryId",
+          "default": ""
+        },
+        "lists": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "title_keywords": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CategoryId": {
+      "type": "string"
+    },
+    "Confidence": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "Confirm": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "never"
+          ]
+        },
+        {
+          "description": "Only valid for idle and item-age triggers: on a share or lock there is no time to ask,\nand a dialog would show up on the shared screen.",
+          "type": "object",
+          "properties": {
+            "countdown": {
+              "$ref": "#/$defs/Duration"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "countdown"
+          ]
+        }
+      ]
+    },
+    "DocKind": {
+      "type": "string",
+      "enum": [
+        "pdf",
+        "image",
+        "word",
+        "excel",
+        "power_point",
+        "pages",
+        "keynote",
+        "numbers",
+        "text",
+        "other"
+      ]
+    },
+    "Duration": {
+      "type": "string",
+      "examples": [
+        "90s",
+        "15m",
+        "2h",
+        "1d"
+      ],
+      "pattern": "^[0-9]+[smhd]$"
+    },
+    "Language": {
+      "type": "string",
+      "enum": [
+        "system",
+        "en",
+        "hu"
+      ]
+    },
+    "Matcher": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "private"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "category": {
+              "$ref": "#/$defs/CategoryId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "category"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domain"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "url_glob": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "url_glob"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "title_contains": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title_contains"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "app": {
+              "$ref": "#/$defs/AppSelector"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "app"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "file_glob": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file_glob"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "doc_kind": {
+              "$ref": "#/$defs/DocKind"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "doc_kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Matcher"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "any"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Matcher"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "all"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/Matcher"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "not"
+          ]
+        }
+      ]
+    },
+    "Protect": {
+      "description": "Targets that are never touched, whatever the rules say. Protection always wins.",
+      "type": "object",
+      "properties": {
+        "apps": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AppSelector"
+          }
+        },
+        "audible_tabs": {
+          "type": "boolean",
+          "default": false
+        },
+        "categories": {
+          "type": "array",
+          "default": [
+            "meeting"
+          ],
+          "items": {
+            "$ref": "#/$defs/CategoryId"
+          }
+        },
+        "domains": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "pinned_tabs": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "Rule": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "confirm": {
+          "$ref": "#/$defs/Confirm",
+          "default": "never"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "except": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Matcher"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "$ref": "#/$defs/RuleId"
+        },
+        "match": {
+          "$ref": "#/$defs/Matcher"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "on_unsaved": {
+          "$ref": "#/$defs/UnsavedPolicy",
+          "default": "save_then_close"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetKindTag"
+          }
+        },
+        "when": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Trigger"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "when",
+        "targets",
+        "match",
+        "action"
+      ]
+    },
+    "RuleId": {
+      "type": "string"
+    },
+    "TargetKindTag": {
+      "type": "string",
+      "enum": [
+        "tab",
+        "document",
+        "app_window",
+        "process"
+      ]
+    },
+    "Trigger": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "panic",
+            "screen_share",
+            "display_mirrored",
+            "call_likely",
+            "will_sleep",
+            "lid_closed",
+            "locked"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "away_longer_than": {
+              "$ref": "#/$defs/Duration"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "away_longer_than"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "idle_longer_than": {
+              "$ref": "#/$defs/Duration"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "idle_longer_than"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "item_open_longer_than": {
+              "$ref": "#/$defs/Duration"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "item_open_longer_than"
+          ]
+        }
+      ]
+    },
+    "UnsavedPolicy": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "hide",
+            "skip_and_notify",
+            "discard"
+          ]
+        },
+        {
+          "description": "Untitled documents go to `Config::untitled_save_dir` where the app allows it, otherwise they are hidden.",
+          "type": "string",
+          "const": "save_then_close"
+        }
+      ]
+    }
+  }
+}

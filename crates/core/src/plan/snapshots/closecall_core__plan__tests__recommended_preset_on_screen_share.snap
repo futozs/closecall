@@ -1,0 +1,86 @@
+---
+source: crates/core/src/plan/tests.rs
+assertion_line: 570
+expression: plan
+---
+steps:
+  - target: 6
+    action: hide
+    on_unsaved: save_then_close
+    phase: conceal
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: share-hide-private-apps
+        evidence:
+          kind: category
+          id: password_managers
+          via:
+            kind: app
+            app: 1Password
+  - target: 7
+    action: hide
+    on_unsaved: save_then_close
+    phase: conceal
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: share-hide-private-apps
+        evidence:
+          kind: category
+          id: messengers
+          via:
+            kind: app
+            app: Slack
+  - target: 1
+    action: close
+    on_unsaved: save_then_close
+    phase: close_tabs
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: share-close-sensitive-tabs
+        evidence:
+          kind: category
+          id: banking
+          via:
+            kind: domain
+            domain: otpbank.hu
+  - target: 2
+    action: close
+    on_unsaved: save_then_close
+    phase: close_tabs
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: share-close-sensitive-tabs
+        evidence:
+          kind: category
+          id: adult
+          via:
+            kind: domain
+            domain: pornhub.com
+  - target: 3
+    action: close
+    on_unsaved: save_then_close
+    phase: close_tabs
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: private-windows-on-share
+        evidence:
+          kind: private
+  - target: 5
+    action: close
+    on_unsaved: save_then_close
+    phase: close_documents
+    fell_back_from: ~
+    confirm: never
+    because:
+      - rule: share-close-invoices
+        evidence:
+          kind: category
+          id: invoices
+          via:
+            kind: title_contains
+            keyword: számla

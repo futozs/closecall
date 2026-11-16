@@ -7,7 +7,6 @@ use crate::Dur;
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS, JsonSchema,
 )]
-#[serde(transparent)]
 #[ts(export)]
 pub struct RuleId(pub String);
 
@@ -25,23 +24,19 @@ pub struct RuleId(pub String);
     TS,
     JsonSchema,
 )]
-#[serde(transparent)]
 #[ts(export)]
 pub struct CategoryId(pub String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
-#[serde(transparent)]
 #[ts(export)]
 pub struct TargetId(pub u64);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
-#[serde(transparent)]
 #[ts(export)]
 pub struct ProviderId(pub String);
 
 /// Only the provider that created a handle may interpret it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(transparent)]
 #[ts(export)]
 pub struct Handle(pub String);
 

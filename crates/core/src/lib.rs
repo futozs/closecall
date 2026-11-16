@@ -8,6 +8,8 @@ pub mod matcher;
 pub mod model;
 pub mod plan;
 pub mod platform;
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
 pub mod text;
 
 pub use duration::Dur;

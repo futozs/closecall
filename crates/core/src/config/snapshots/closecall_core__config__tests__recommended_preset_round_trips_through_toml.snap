@@ -1,0 +1,144 @@
+---
+source: crates/core/src/config/tests.rs
+assertion_line: 53
+expression: text
+---
+version = 1
+language = "system"
+panic_hotkey = "Ctrl+Alt+Shift+B"
+share_min_confidence = "medium"
+untitled_save_dir = "~/Documents/Close Call"
+restore_window = "2h"
+categories = []
+
+[protect]
+categories = ["meeting"]
+apps = []
+domains = []
+audible_tabs = false
+pinned_tabs = false
+
+[[rule]]
+id = "share-close-sensitive-tabs"
+name = "preset.share-close-sensitive-tabs"
+enabled = true
+when = [
+    "panic",
+    "screen_share",
+    "display_mirrored",
+]
+targets = ["tab"]
+action = "close"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[rule.match]
+any = [
+    { category = "adult" },
+    { category = "banking" },
+    { category = "webmail" },
+    { category = "medical" },
+]
+
+[[rule]]
+id = "private-windows-on-share"
+name = "preset.private-windows-on-share"
+enabled = true
+when = [
+    "panic",
+    "screen_share",
+    "display_mirrored",
+]
+targets = ["tab"]
+match = "private"
+action = "close"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[[rule]]
+id = "share-hide-private-apps"
+name = "preset.share-hide-private-apps"
+enabled = true
+when = [
+    "panic",
+    "screen_share",
+    "display_mirrored",
+]
+targets = [
+    "app_window",
+    "process",
+]
+action = "hide"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[rule.match]
+any = [
+    { category = "password_managers" },
+    { category = "messengers" },
+]
+
+[[rule]]
+id = "share-close-invoices"
+name = "preset.share-close-invoices"
+enabled = true
+when = [
+    "panic",
+    "screen_share",
+    "display_mirrored",
+]
+targets = ["document"]
+action = "close"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[rule.match]
+category = "invoices"
+
+[[rule]]
+id = "lid-close-adult"
+name = "preset.lid-close-adult"
+enabled = true
+when = [
+    "lid_closed",
+    "will_sleep",
+]
+targets = ["tab"]
+action = "close"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[rule.match]
+category = "adult"
+
+[[rule]]
+id = "away-close-banking"
+name = "preset.away-close-banking"
+enabled = true
+targets = ["tab"]
+action = "close"
+on_unsaved = "save_then_close"
+confirm = "never"
+
+[[rule.when]]
+away_longer_than = "15m"
+
+[rule.match]
+category = "banking"
+
+[[rule]]
+id = "bank-tab-open-too-long"
+name = "preset.bank-tab-open-too-long"
+enabled = true
+targets = ["tab"]
+action = "close"
+on_unsaved = "save_then_close"
+
+[[rule.when]]
+item_open_longer_than = "2h"
+
+[rule.match]
+category = "banking"
+
+[rule.confirm]
+countdown = "1m"

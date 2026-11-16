@@ -2,11 +2,11 @@ use std::fmt;
 use std::str::FromStr;
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use ts_rs::TS;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
-#[serde(try_from = "String", into = "String")]
+/// Serialized as a string such as `15m`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, TS)]
 #[ts(export, type = "string")]
 pub struct Dur(pub Duration);
 
@@ -54,28 +54,27 @@ impl FromStr for Dur {
     }
 }
 
-impl TryFrom<String> for Dur {
-    type Error = ParseDurError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        value.parse()
+impl Serialize for Dur {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
     }
 }
 
-impl From<Dur> for String {
-    fn from(value: Dur) -> Self {
-        value.to_string()
+impl<'de> Deserialize<'de> for Dur {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        text.parse().map_err(serde::de::Error::custom)
     }
 }
 
 impl fmt::Display for Dur {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let secs = self.0.as_secs();
-        if secs != 0 && secs % 86_400 == 0 {
+        if secs != 0 && secs.is_multiple_of(86_400) {
             write!(f, "{}d", secs / 86_400)
-        } else if secs != 0 && secs % 3600 == 0 {
+        } else if secs != 0 && secs.is_multiple_of(3600) {
             write!(f, "{}h", secs / 3600)
-        } else if secs != 0 && secs % 60 == 0 {
+        } else if secs != 0 && secs.is_multiple_of(60) {
             write!(f, "{}m", secs / 60)
         } else {
             write!(f, "{secs}s")
@@ -107,6 +106,18 @@ mod tests {
             assert_eq!(s.parse::<Dur>().unwrap().to_string(), s);
         }
         assert_eq!("120m".parse::<Dur>().unwrap().to_string(), "2h");
+    }
+
+    #[test]
+    fn serializes_as_string() {
+        let dur: Dur = serde_json::from_str("\"15m\"").unwrap();
+        assert_eq!(dur, Dur::from_mins(15));
+        assert_eq!(
+            serde_json::to_string(&Dur::from_hours(2)).unwrap(),
+            "\"2h\""
+        );
+        assert!(serde_json::from_str::<Dur>("\"15x\"").is_err());
+        assert!(serde_json::from_str::<Dur>("15").is_err());
     }
 
     #[test]
