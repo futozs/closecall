@@ -1,0 +1,9 @@
+# allow-invalid: tokio (and its `net` feature) is absent from most crates' graphs, so those paths do not resolve everywhere.
+disallowed-types = [
+  { path = "std::net::TcpStream", reason = "Close Call never opens AF_INET/AF_INET6 sockets; use stdio, Unix sockets or named pipes" },
+  { path = "std::net::TcpListener", reason = "Close Call never opens AF_INET/AF_INET6 sockets; use stdio, Unix sockets or named pipes" },
+  { path = "std::net::UdpSocket", reason = "Close Call never opens AF_INET/AF_INET6 sockets" },
+  { path = "tokio::net::TcpStream", reason = "Close Call never opens AF_INET/AF_INET6 sockets; use stdio, Unix sockets or named pipes", allow-invalid = true },
+  { path = "tokio::net::TcpListener", reason = "Close Call never opens AF_INET/AF_INET6 sockets; use stdio, Unix sockets or named pipes", allow-invalid = true },
+  { path = "tokio::net::UdpSocket", reason = "Close Call never opens AF_INET/AF_INET6 sockets", allow-invalid = true },
+]

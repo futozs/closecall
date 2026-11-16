@@ -1,0 +1,185 @@
+# Builds Close Call into a DRAFT GitHub release: macOS universal (app, dmg), Windows (NSIS, MSI)
+# and Linux (deb, rpm, AppImage). Then it adds SHA256SUMS and a build-provenance attestation for
+# every asset. A maintainer reviews the draft and publishes it. No updater artifacts are built.
+#
+# Runs on a pushed v* tag, or from release-please.yml via workflow_call, because a tag that
+# release-please creates with GITHUB_TOKEN does not start other workflows.
+#
+# Signing is optional. Each signing step is skipped when its secrets are missing, and the bundles
+# are then published unsigned:
+#   macOS signing       APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY
+#   macOS notarization  APPLE_ID, APPLE_PASSWORD (app-specific password), APPLE_TEAM_ID; needs signing
+#   Windows signing     WINDOWS_CERTIFICATE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing tag to release, for example v0.1.0
+        type: string
+        required: true
+    secrets:
+      APPLE_CERTIFICATE:
+        required: false
+      APPLE_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_SIGNING_IDENTITY:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      WINDOWS_CERTIFICATE:
+        required: false
+      WINDOWS_CERTIFICATE_PASSWORD:
+        required: false
+
+permissions: {}
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: 1.3.14
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the draft release
+    outputs:
+      release-id: ${{ steps.draft.outputs.release-id }}
+    steps:
+      - name: Find or create the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$is_draft" != true ]; then
+              echo "::error::Release $TAG is already published. Tag a new version instead."
+              exit 1
+            fi
+          else
+            gh release create "$TAG" --draft --verify-tag --title "Close Call ${TAG#v}" --generate-notes
+          fi
+          echo "release-id=$(gh release view "$TAG" --json databaseId --jq .databaseId)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: draft
+    permissions:
+      contents: write # upload bundles to the draft release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            runner: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg
+          - name: Windows x64
+            runner: windows-latest
+            args: --bundles nsis,msi
+          # The oldest supported Ubuntu runner keeps the glibc baseline of the Linux bundles low.
+          - name: Linux x64
+            runner: ubuntu-22.04
+            args: --bundles deb,rpm,appimage
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: scripts/ci/install-linux-deps.sh
+      - name: Install Rust toolchain from rust-toolchain.toml
+        run: rustup toolchain install
+      - name: Add both macOS targets for the universal binary
+        if: runner.os == 'macOS'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+          no-cache: true
+      - run: bun install --frozen-lockfile
+      - name: Configure macOS signing and notarization
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/ci/macos-signing-env.sh
+      - name: Configure Windows signing
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE -or -not $env:WINDOWS_CERTIFICATE_PASSWORD) {
+            Write-Output "::notice::Windows signing skipped: set WINDOWS_CERTIFICATE and WINDOWS_CERTIFICATE_PASSWORD to sign the installers."
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          $config = Join-Path $env:RUNNER_TEMP 'tauri.windows-signing.json'
+          @{ bundle = @{ windows = @{
+              certificateThumbprint = $cert.Thumbprint
+              digestAlgorithm = 'sha256'
+              timestampUrl = 'http://timestamp.digicert.com'
+          } } } | ConvertTo-Json -Depth 4 | Set-Content -Path $config -Encoding utf8
+          "TAURI_EXTRA_ARGS=--config $config" >> $env:GITHUB_ENV
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          releaseId: ${{ needs.draft.outputs.release-id }}
+          projectPath: app
+          tauriScript: bun run tauri
+          args: ${{ matrix.args }} ${{ env.TAURI_EXTRA_ARGS }}
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+
+  checksums:
+    name: SHA256SUMS and provenance
+    needs: [draft, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # read the draft's assets, upload SHA256SUMS
+      id-token: write # sign the attestation with this workflow's OIDC identity
+      attestations: write # store the attestation
+    steps:
+      # Hash the assets as GitHub serves them: it renames files on upload (spaces become dots).
+      - name: Hash release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download "$TAG" --dir assets
+          rm -f assets/SHA256SUMS
+          (cd assets && sha256sum -- *) > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: SHA256SUMS
+      - name: Upload SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$TAG" SHA256SUMS --clobber
