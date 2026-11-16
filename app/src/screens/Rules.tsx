@@ -53,14 +53,24 @@ function RuleRow({ rule }: { rule: Rule }) {
   );
 }
 
+/** Replaces the rules only, and saves: language, hotkey, categories and protection stay. */
+function useRecommendedRules() {
+  const { config, saveConfig } = useAppData();
+  return async () => {
+    const fresh = await ipc.resetConfig("recommended");
+    const issues = await saveConfig({ ...config, rule: fresh.rule });
+    if (issues.length > 0) throw new Error("the recommended rules did not validate");
+  };
+}
+
 function ResetRules() {
   const { t } = useTranslation();
-  const { setConfig } = useAppData();
+  const applyRecommended = useRecommendedRules();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState(false);
   const reset = async () => {
     try {
-      setConfig(await ipc.resetConfig("recommended"));
+      await applyRecommended();
       setConfirming(false);
     } catch {
       setError(true);
@@ -89,7 +99,9 @@ function ResetRules() {
 
 export function Rules() {
   const { t } = useTranslation();
-  const { config, categories, setConfig } = useAppData();
+  const { config, categories } = useAppData();
+  const applyRecommended = useRecommendedRules();
+  const [failed, setFailed] = useState(false);
   const [mode, id] = useSubpath();
   const firstCategory = categories[0]?.id ?? "banking";
 
@@ -118,12 +130,13 @@ export function Rules() {
           body={t("rules.empty_body")}
           action={
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" onClick={() => void ipc.resetConfig("recommended").then(setConfig)}>
+              <Button variant="primary" onClick={() => void applyRecommended().catch(() => setFailed(true))}>
                 {t("rules.use_recommended")}
               </Button>
               <a href="#rules/new" className="btn btn-secondary">
                 {t("rules.new")}
               </a>
+              {failed && <ErrorNote>{t("common.error")}</ErrorNote>}
             </div>
           }
         />

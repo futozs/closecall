@@ -44,15 +44,11 @@ pub async fn save_config(
     Ok(issues)
 }
 
+/// Nothing changes until the window saves what it makes of the preset, hotkey and tray
+/// language included.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn reset_config(
-    app: AppHandle,
-    engine: State<'_, Engine>,
-    preset: Preset,
-) -> Reply<Config> {
-    let config = call(&engine, move |engine| engine.reset_config(preset)).await?;
-    shell::apply_config(&app, config.language, &config.panic_hotkey);
-    Ok(config)
+pub async fn reset_config(engine: State<'_, Engine>, preset: Preset) -> Reply<Config> {
+    call(&engine, move |engine| engine.reset_config(preset)).await
 }
 
 #[tauri::command(rename_all = "snake_case")]
