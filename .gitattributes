@@ -1,0 +1,2 @@
+# LF everywhere: generated files (schema, bindings, snapshots) are compared byte for byte in tests.
+* text=auto eol=lf
