@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a trigger, a category, an action or another improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: situation
+    attributes:
+      label: The situation
+      description: When did you wish Close Call did something different? Describe the moment, not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating systems this matters on
+      multiple: true
+      options:
+        - macOS
+        - Windows
+        - Linux (X11)
+        - Linux (Wayland)
+  - type: markdown
+    attributes:
+      value: |
+        Features that need network access (sync, update checks, online lists) will not be added:
+        see docs/decisions/0002-no-network-ever.md.

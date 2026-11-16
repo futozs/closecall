@@ -1,0 +1,66 @@
+name: A site or app was not detected
+description: Something sensitive stayed open, or Close Call acted on something it should have left alone.
+labels: ["detection"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste private URLs, page titles or file paths.** Issues are public and searchable.
+        Name the site by its public domain only if you are comfortable with that (for example
+        `otpbank.hu`), never a URL with your account, a search, or a document name in it. For apps,
+        the app's name is enough.
+  - type: dropdown
+    id: direction
+    attributes:
+      label: What went wrong
+      options:
+        - Something sensitive was not closed or hidden
+        - Something was closed or hidden that should not have been
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of item
+      options:
+        - Browser tab
+        - Document window
+        - App window
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Category it should (or should not) belong to
+      placeholder: banking, webmail, adult, medical, messengers, invoices, meeting ...
+  - type: input
+    id: site-or-app
+    attributes:
+      label: Public domain or app name
+      description: Optional. A domain like `example.hu` or an app like `Signal`. No full URLs.
+  - type: input
+    id: where
+    attributes:
+      label: Browser or app and its version, and your OS
+      placeholder: Safari 19 on macOS 26.2
+    validations:
+      required: true
+  - type: input
+    id: trigger
+    attributes:
+      label: Trigger
+      placeholder: screen share in Zoom, panic hotkey, lid closed ...
+  - type: textarea
+    id: diag
+    attributes:
+      label: Output of `closecall diag`
+      description: Shows what Close Call can see on your machine, without titles, URLs or paths.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This report contains no private URLs, page titles or file paths.
+          required: true
