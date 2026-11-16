@@ -1,0 +1,28 @@
+{
+  "tray": {
+    "open": "Close Call megnyitása…",
+    "clean_now": "Elpakolás most",
+    "pause_15": "Szünet 15 percre",
+    "pause_60": "Szünet 1 órára",
+    "resume": "Folytatás",
+    "status_idle": "Figyel, nincs megosztás",
+    "status_sharing": "Megosztás folyik, védelem be",
+    "quit": "Kilépés a Close Callból"
+  },
+  "notify": {
+    "run_title": "A Close Call elpakolt",
+    "run_body": {
+      "done_one": "{{count}} bezárva",
+      "done_other": "{{count}} bezárva",
+      "hidden_one": "{{count}} elrejtve",
+      "hidden_other": "{{count}} elrejtve",
+      "skipped_one": "{{count}} nyitva hagyva",
+      "skipped_other": "{{count}} nyitva hagyva",
+      "separator": ", "
+    },
+    "unsaved_hidden_one": "{{count}} dokumentumban nem mentett változtatás volt, ezért bezárás helyett elrejtette.",
+    "unsaved_hidden_other": "{{count}} dokumentumban nem mentett változtatás volt, ezért bezárás helyett elrejtette őket.",
+    "permission_missing": "A Close Call elvesztett egy engedélyt, amelyre szüksége van. Nyisd meg, és nézd meg, mi változott.",
+    "share_detected": "Képernyőmegosztás észlelve, a védelem be van kapcsolva."
+  }
+}

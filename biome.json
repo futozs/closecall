@@ -1,0 +1,45 @@
+{
+  "$schema": "./app/node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "app/src/**",
+      "app/tests/**",
+      "app/*.ts",
+      "app/*.json",
+      "locales/**",
+      "biome.json",
+      "!app/src/bindings",
+      "!app/tests/screenshots"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },
+  "javascript": { "formatter": { "quoteStyle": "double", "trailingCommas": "all", "semicolons": "always" } },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Close Call never touches the network. Talk to Rust through app/src/ipc.ts.",
+              "XMLHttpRequest": "Close Call never touches the network. Talk to Rust through app/src/ipc.ts.",
+              "WebSocket": "Close Call never touches the network.",
+              "EventSource": "Close Call never touches the network."
+            }
+          }
+        },
+        "noNonNullAssertion": "error",
+        "useImportType": "error"
+      },
+      "suspicious": { "noConsole": { "level": "error", "options": { "allow": ["error"] } } },
+      "security": { "noDangerouslySetInnerHtml": "error" }
+    }
+  }
+}

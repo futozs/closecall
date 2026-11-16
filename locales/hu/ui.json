@@ -1,0 +1,662 @@
+{
+  "app": {
+    "name": "Close Call",
+    "tagline": "Bezártam?"
+  },
+  "common": {
+    "cancel": "Mégse",
+    "dismiss": "Rendben",
+    "error": "Ez nem sikerült. A Close Call motorja nem válaszolt, próbáld újra egy kicsit később.",
+    "startup_error": "A Close Call nem tudta megnyitni a beállításait: {{error}}"
+  },
+  "platform": {
+    "macos": "macOS",
+    "windows": "Windows",
+    "linux": "Linux"
+  },
+  "nav": {
+    "label": "Részek",
+    "home": "Állapot",
+    "rules": "Szabályok",
+    "categories": "Kategóriák",
+    "activity": "Napló",
+    "settings": "Beállítások"
+  },
+  "shell": {
+    "skip": "Ugrás a tartalomra",
+    "watching": "Figyel",
+    "sharing": "Megosztás folyik, védelem be",
+    "mirrored": "Tükrözött kijelző, védelem be",
+    "paused": "Szünetel {{time}}-ig"
+  },
+  "confidence": {
+    "low": "alacsony",
+    "medium": "közepes",
+    "high": "magas"
+  },
+  "home": {
+    "state": {
+      "idle": "Figyel",
+      "sharing": "Megosztás folyamatban",
+      "mirrored": "Tükrözés folyamatban",
+      "paused": "Szünetel"
+    },
+    "title": {
+      "idle": "Most semmi sincs megosztva",
+      "sharing": "A képernyőd meg van osztva",
+      "mirrored": "Ez a képernyő egy másik kijelzőn is látszik",
+      "paused": "Szünetel {{time}}-ig"
+    },
+    "body": {
+      "idle": "Amint elindul egy megosztás, csatlakozik egy kivetítő vagy lecsukod a gépet, a Close Call közbelép. Addig csak figyel.",
+      "sharing": "A védelem be van kapcsolva. Ha most nyitsz meg valami érzékenyet, a Close Call rögtön bezárja vagy elrejti.",
+      "mirrored": "A védelem be van kapcsolva. Ha most nyitsz meg valami érzékenyet ezen a képernyőn, a Close Call rögtön bezárja vagy elrejti.",
+      "paused": "Addig magától semmit nem zár be. A pánikgomb ettől még működik."
+    },
+    "confidence": "{{level}} megbízhatóság",
+    "call_likely": "Úgy tűnik, mindjárt kezdődik egy hívás. Most érdemes elpakolni.",
+    "clean_now": "Elpakolás most",
+    "simulate": "Megosztás kipróbálása",
+    "pause_label": "Automatikus elpakolás szüneteltetése",
+    "pause_15": "Szünet 15 percre",
+    "pause_60": "Szünet 1 órára",
+    "resume": "Folytatás most",
+    "panic_done": "Elpakolva",
+    "see_activity": "Napló megnyitása",
+    "sim": {
+      "title": "Ha most indulna egy képernyőmegosztás",
+      "lead": "Ez csak próba, még semmi nem változott.",
+      "nothing": "Semmihez nem nyúlna: egyik nyitott elem sem illik olyan szabályra, amelyet a megosztás élesít.",
+      "run": "Végrehajtás élesben",
+      "done": "A próbamegosztás lefutott"
+    },
+    "open_now": "Most nyitva",
+    "open_now_lead": "Ezeket zárná be vagy rejtené el most a pánikgomb.",
+    "sensitive_one": "{{count}} érzékeny elem van nyitva",
+    "sensitive_other": "{{count}} érzékeny elem van nyitva",
+    "sensitive_none": "Nincs nyitva semmi érzékeny.",
+    "preflight": "Indulás előtti ellenőrzés",
+    "preflight_lead": "Ami ahhoz kell, hogy a Close Call időben közbe tudjon lépni.",
+    "check": {
+      "access": "Hozzáférés",
+      "apps": "Alkalmazások, amelyeket vezérelhet",
+      "watching": "Mit figyel",
+      "rules": "Szabályok",
+      "rules_active_one": "{{count}} aktív",
+      "rules_active_other": "{{count}} aktív",
+      "rules_none": "Egy sem aktív",
+      "rules_open": "Szabályok beállítása"
+    },
+    "last_run": "Legutóbb",
+    "last_run_none": "Még semmi nem futott. Nyomd meg a pánikgombot, vagy próbálj ki egy megosztást, és meglátod, mi történik."
+  },
+  "run": {
+    "done_one": "{{count}} kész",
+    "done_other": "{{count}} kész",
+    "fell_back_one": "{{count}} kíméletesebben kezelve",
+    "fell_back_other": "{{count}} kíméletesebben kezelve",
+    "skipped_one": "{{count}} kihagyva",
+    "skipped_other": "{{count}} kihagyva",
+    "failed_one": "{{count}} nem sikerült",
+    "failed_other": "{{count}} nem sikerült",
+    "nothing": "Nem volt mit tenni"
+  },
+  "plan": {
+    "close": "Bezárná",
+    "hide": "Elrejtené",
+    "minimize": "Kis méretre tenné",
+    "quit": "Kilépne belőle",
+    "notify_only": "Szólna róla"
+  },
+  "action_past": {
+    "close": "Bezárva",
+    "hide": "Elrejtve",
+    "minimize": "Kis méretre téve",
+    "quit": "Leállítva",
+    "notify_only": "Jelezve"
+  },
+  "outcome": {
+    "fell_back": "{{action}}, kíméletesebben",
+    "skipped": "Kihagyva",
+    "failed": "Nem sikerült"
+  },
+  "evidence": {
+    "why": "Miért:",
+    "category": "{{category}} ({{via}})",
+    "domain": "domain: {{domain}}",
+    "url_glob": "címminta: {{glob}}",
+    "title_contains": "a címben: „{{keyword}}”",
+    "app": "alkalmazás: {{app}}",
+    "file_glob": "fájlminta: {{glob}}",
+    "doc_kind": "dokumentumtípus: {{kind}}",
+    "private": "privát ablak",
+    "open_longer_than": "több mint {{duration}} óta nyitva"
+  },
+  "doc_kind": {
+    "pdf": "PDF",
+    "image": "Kép",
+    "word": "Word",
+    "excel": "Excel",
+    "power_point": "PowerPoint",
+    "pages": "Pages",
+    "keynote": "Keynote",
+    "numbers": "Numbers",
+    "text": "Szöveg",
+    "other": "Egyéb"
+  },
+  "fired": {
+    "panic": "Pánikgomb",
+    "screen_share": "Képernyőmegosztás",
+    "display_mirrored": "Kivetítő vagy tükrözés",
+    "call_likely": "Kezdődő hívás",
+    "will_sleep": "Alvó állapot",
+    "lid_closed": "Lecsukott fedél",
+    "locked": "Képernyőzár",
+    "away": "{{duration}} távollét",
+    "idle": "{{duration}} tétlenség",
+    "item_age": "{{duration}} óta nyitva"
+  },
+  "when": {
+    "panic": "Pánikgomb",
+    "screen_share": "Elindul egy képernyőmegosztás",
+    "display_mirrored": "Kivetítő vagy tükrözés",
+    "call_likely": "Mindjárt kezdődik egy hívás",
+    "will_sleep": "A gép elalszik",
+    "lid_closed": "Lecsukod a fedelet",
+    "locked": "Lezárod a képernyőt",
+    "away_longer_than": "Távollét legalább",
+    "idle_longer_than": "Tétlenség legalább",
+    "item_open_longer_than": "Egy elem nyitva legalább"
+  },
+  "when_short": {
+    "panic": "pánikgomb",
+    "screen_share": "képernyőmegosztás",
+    "display_mirrored": "kivetítő",
+    "call_likely": "kezdődő hívás",
+    "will_sleep": "alvás",
+    "lid_closed": "lecsukott fedél",
+    "locked": "képernyőzár",
+    "away_longer_than": "{{duration}} távollét",
+    "idle_longer_than": "{{duration}} tétlenség",
+    "item_open_longer_than": "{{duration}} óta nyitva"
+  },
+  "target": {
+    "tab": "Böngészőlapok",
+    "document": "Dokumentumok",
+    "app_window": "Alkalmazásablakok",
+    "process": "Teljes alkalmazások"
+  },
+  "target_hint": {
+    "tab": "Egyenként, Chrome-ban, Safariban, Edge-ben, Brave-ben, Arcban és Firefoxban.",
+    "document": "PDF-ek, Word-fájlok és más nyitott dokumentumok.",
+    "app_window": "Egy-egy ablak, például egy csevegőablak.",
+    "process": "Egy alkalmazás összes ablaka egyszerre."
+  },
+  "target_plural": {
+    "tab": "lapok",
+    "document": "dokumentumok",
+    "app_window": "alkalmazásablakok",
+    "process": "alkalmazások"
+  },
+  "action": {
+    "close": "Bezárás",
+    "hide": "Elrejtés",
+    "minimize": "Kis méret",
+    "quit": "Kilépés az alkalmazásból",
+    "notify_only": "Csak értesítés"
+  },
+  "action_hint": {
+    "close": "A lapok és dokumentumok egy ideig visszaállíthatók a Naplóból.",
+    "hide": "Azonnali, és semmi nem vész el. Az alkalmazás tovább fut a háttérben.",
+    "minimize": "A Dockba küldi az ablakot. Ez animálva történik, ezért csak végső megoldás.",
+    "quit": "Kilép az egész alkalmazásból. Az ajánlott szabályok soha nem használják.",
+    "notify_only": "Semmihez nem nyúl, csak értesítést kapsz a darabszámmal."
+  },
+  "unsaved": {
+    "save_then_close": "Mentés, aztán bezárás",
+    "hide": "Elrejtés bezárás helyett",
+    "skip_and_notify": "Maradjon nyitva, és szóljon",
+    "discard": "Bezárás mentés nélkül"
+  },
+  "unsaved_hint": {
+    "save_then_close": "A még sosem mentett dokumentumok ide kerülnek, ha az alkalmazás engedi: {{folder}}. Ha nem, elrejti őket.",
+    "hide": "A dokumentum a változtatásokkal együtt nyitva marad, csak nem látszik.",
+    "skip_and_notify": "Nem történik vele semmi, értesítést kapsz róla.",
+    "discard": "A nem mentett változtatások elvesznek. Csak olyan dokumentumokhoz használd, amelyeket sosem szerkesztesz."
+  },
+  "confirm": {
+    "never": "Azonnal",
+    "countdown": "Előbb visszaszámol, „Megtartom” gombbal"
+  },
+  "matcher": {
+    "kind_label": "Feltétel",
+    "kind": {
+      "category": "Kategória",
+      "domain": "Domain",
+      "url_glob": "Címminta (URL)",
+      "title_contains": "A címben szerepel",
+      "app": "Alkalmazás",
+      "file_glob": "Fájlminta",
+      "doc_kind": "Dokumentumtípus",
+      "private": "Privát ablak",
+      "any": "Bármelyik",
+      "all": "Mindegyik",
+      "not": "Nem"
+    },
+    "group_hint": {
+      "any": "akkor illik, ha legalább egy alábbi feltétel teljesül",
+      "all": "csak akkor illik, ha minden alábbi feltétel teljesül",
+      "not": "akkor illik, ha az alábbi feltétel nem teljesül"
+    },
+    "private_hint": "Inkognitó és privát ablakok, ahol a böngésző ezt elárulja.",
+    "title_placeholder": "számla",
+    "app_by": "Az alkalmazás azonosítása",
+    "app": {
+      "bundle_id": "Csomagazonosító",
+      "name": "Név",
+      "exe": "Programfájl",
+      "desktop_id": "Desktop-azonosító"
+    },
+    "add": "Feltétel hozzáadása",
+    "remove": "Feltétel törlése",
+    "summary": {
+      "private": "privát ablakok",
+      "title_contains": "„{{keyword}}” a címben",
+      "doc_kind": "dokumentumtípus: {{kind}}",
+      "not": "bármi, kivéve: {{inner}}"
+    }
+  },
+  "rules": {
+    "title": "Szabályok",
+    "lead": "Minden szabály megmondja, mikor lépjen közbe a Close Call, mit nézzen, és mit tegyen vele.",
+    "new": "Új szabály",
+    "count_one": "{{count}} szabály, ebből {{active}} aktív",
+    "count_other": "{{count}} szabály, ebből {{active}} aktív",
+    "enabled_label": "{{name}} bekapcsolva",
+    "matches": "Mire illik: {{what}}",
+    "except": "kivéve: {{what}}",
+    "toggle_failed": "Ezt a változtatást nem sikerült menteni.",
+    "summary": {
+      "close": "{{when}}: {{targets}} bezárása",
+      "hide": "{{when}}: {{targets}} elrejtése",
+      "minimize": "{{when}}: {{targets}} kis méretre tétele",
+      "quit": "{{when}}: {{targets}} leállítása",
+      "notify_only": "{{when}}: szól, ha {{targets}} vannak nyitva"
+    },
+    "empty_title": "Még nincs szabály",
+    "empty_body": "Szabályok nélkül a Close Call csak figyel. Indulj az ajánlott készletből, vagy írd meg a sajátodat.",
+    "use_recommended": "Ajánlott szabályok használata",
+    "reset": "Ajánlott szabályok visszaállítása",
+    "reset_confirm": "Ez az összes szabályodat lecseréli az ajánlott készletre.",
+    "reset_yes": "Csere"
+  },
+  "editor": {
+    "back": "Összes szabály",
+    "title_new": "Új szabály",
+    "id": "Azonosító: {{id}}",
+    "issues_one": "Mentés előtt {{count}} dolgot javítani kell.",
+    "issues_other": "Mentés előtt {{count}} dolgot javítani kell.",
+    "other_issues_one": "Egy másik szabályban is van hiba ({{count}}). Nyisd meg a listából, és javítsd.",
+    "other_issues_other": "Más szabályokban is van hiba ({{count}}). Nyisd meg őket a listából, és javítsd.",
+    "name": "Név",
+    "name_hint": "Ezt látod a Naplóban, amikor a szabály közbelép. Ha üresen hagyod, a javasolt név marad.",
+    "name_placeholder": "Például: Bérportál bezárása megosztáskor",
+    "when": "Mikor",
+    "when_hint": "Bármelyik esemény élesíti a szabályt.",
+    "share_hint": "A Beállításokban megadott észlelési megbízhatóságot használja.",
+    "targets": "Mit nézzen",
+    "match": "Mire illik",
+    "match_hint": "Mitől számít érzékenynek egy elem. A védett elemekhez akkor sem nyúl, ha ide illenek.",
+    "except": "Kivéve",
+    "except_hint": "Ami erre illik, ahhoz nem nyúl.",
+    "except_add": "Kivétel hozzáadása",
+    "action": "Mit tegyen",
+    "quit_warning": "Kilépéskor az alkalmazás összes dokumentuma a lenti, nem mentett változtatásokra vonatkozó beállítás szerint záródik be. Egyes alkalmazások a következő indításkor újra megnyitják őket.",
+    "on_unsaved": "Ha egy dokumentumban nem mentett változtatás van",
+    "on_unsaved_hint": "Ha nem tudni, van-e, úgy veszi, hogy van: a munkáddal sosem kockáztat.",
+    "confirm": "Mielőtt közbelép",
+    "confirm_hint": "Visszaszámlálás közben megtarthatod az elemet. Csak tétlenségnél és túl régóta nyitott elemeknél működik.",
+    "confirm_not_allowed": "Visszaszámlálás csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem. Megosztás vagy zárolás közben nincs idő kérdezni, és a párbeszédablak a megosztott képernyőn látszana.",
+    "save": "Szabály mentése",
+    "delete": "Szabály törlése",
+    "delete_confirm": "Törlöd ezt a szabályt? Ezt nem lehet visszavonni.",
+    "delete_yes": "Törlés"
+  },
+  "duration": {
+    "unit": "Mértékegység",
+    "s_one": "másodperc",
+    "s_other": "másodperc",
+    "m_one": "perc",
+    "m_other": "perc",
+    "h_one": "óra",
+    "h_other": "óra",
+    "d_one": "nap",
+    "d_other": "nap"
+  },
+  "categories": {
+    "title": "Kategóriák",
+    "lead": "Ezekre a listákra hivatkoznak a szabályok. A beépített listák minden kiadással együtt érkeznek, a Close Call soha nem tölt le semmit.",
+    "yours": "Saját kategóriák",
+    "new": "Új kategória",
+    "empty_title": "Még nincs saját kategóriád",
+    "empty_body": "Gyűjtsd egy csoportba azokat az oldalakat, alkalmazásokat és fájlokat, amelyek neked érzékenyek, például a munkahelyed bérszámfejtő portálját, aztán használd a csoportot egy szabályban.",
+    "builtin": "Beépített",
+    "builtin_lead": "Nyilvános listák pillanatképei és kézzel ellenőrzött bejegyzések. Amelyiket egy szabály sem használja, az nem csinál semmit.",
+    "protected": "Mindig védett",
+    "used_by_one": "{{count}} szabály használja",
+    "used_by_other": "{{count}} szabály használja",
+    "unused": "Egy szabály sem használja",
+    "domains_one": "{{n}} domain",
+    "domains_other": "{{n}} domain",
+    "apps_one": "{{n}} alkalmazás",
+    "apps_other": "{{n}} alkalmazás",
+    "keywords_one": "{{n}} kulcsszó",
+    "keywords_other": "{{n}} kulcsszó",
+    "files_one": "{{n}} fájlminta",
+    "files_other": "{{n}} fájlminta",
+    "nothing": "Üres",
+    "sources_one": "{{count}} forrás",
+    "sources_other": "{{count}} forrás",
+    "source_line": "{{license}} · {{entries}} bejegyzés · pillanatkép: {{date}}",
+    "back": "Összes kategória",
+    "editor": {
+      "title_new": "Új kategória",
+      "name": "Név",
+      "id": "Azonosító",
+      "id_hint": "Kisbetűk, számok és aláhúzás. A szabályok ezzel hivatkoznak rá.",
+      "id_invalid": "Csak kisbetűt, számot és aláhúzást használj.",
+      "id_taken": "Ilyen azonosítójú kategória már van.",
+      "domains": "Domainek",
+      "domains_hint": "Soronként egy, https:// nélkül. Az aldomainek is beleszámítanak.",
+      "apps": "Alkalmazások",
+      "apps_hint": "Soronként egy: csomagazonosító, például com.apple.Notes, vagy az alkalmazás neve.",
+      "keywords": "Kulcsszavak a címben",
+      "keywords_hint": "Soronként egy. A kis- és nagybetű, valamint az ékezet nem számít.",
+      "files": "Fájlminták",
+      "files_hint": "Soronként egy, például **/*bérjegyzék*.pdf",
+      "save": "Kategória mentése",
+      "delete": "Kategória törlése",
+      "delete_confirm": "Törlöd ezt a kategóriát? Ezt nem lehet visszavonni.",
+      "delete_used_one": "{{count}} szabály használja ezt a kategóriát, és a feltétele semmire nem fog illeni. Mégis törlöd?",
+      "delete_used_other": "{{count}} szabály használja ezt a kategóriát, és a feltételeik semmire nem fognak illeni. Mégis törlöd?",
+      "delete_yes": "Törlés"
+    }
+  },
+  "category": {
+    "adult": {
+      "name": "Felnőtt tartalom",
+      "description": "Felnőtt oldalak két nyilvános tiltólistából, összefésülve, ismétlődések nélkül."
+    },
+    "banking": {
+      "name": "Bank",
+      "description": "Netbankok és banki oldalak (a magyar bankokat kézzel ellenőriztük), valamint az „Internetbank” jellegű ablakcímek."
+    },
+    "webmail": {
+      "name": "Webes levelezés",
+      "description": "Gmail, Outlook, Proton, Freemail, Citromail és más böngészős levelezők."
+    },
+    "medical": {
+      "name": "Egészség",
+      "description": "Betegportálok, például az EESZT, leletek és egészségügyi címek. Kézzel gyűjtve, mert nincs nyílt egészségügyi lista."
+    },
+    "financial": {
+      "name": "Pénzügy",
+      "description": "Brókerek, fizetési és befektetési oldalak."
+    },
+    "dating": {
+      "name": "Társkeresés",
+      "description": "Társkereső oldalak és alkalmazások."
+    },
+    "gambling": {
+      "name": "Szerencsejáték",
+      "description": "Fogadási, kaszinó- és lottóoldalak."
+    },
+    "password_managers": {
+      "name": "Jelszókezelők",
+      "description": "Jelszavak, Kulcskarika, 1Password, Bitwarden és hasonló alkalmazások."
+    },
+    "messengers": {
+      "name": "Üzenetküldők",
+      "description": "Üzenetek, Signal, WhatsApp, Telegram, Slack és hasonló alkalmazások."
+    },
+    "invoices": {
+      "name": "Számlák és bérpapírok",
+      "description": "Dokumentumok, amelyek nevében számla, invoice, bérjegyzék, payslip vagy bankszámlakivonat szerepel."
+    },
+    "meeting": {
+      "name": "Videóhívás-alkalmazások",
+      "description": "Zoom, Teams, Meet, FaceTime, Webex, Discord és OBS. Védettek, hogy az elpakolás soha ne bontsa a hívásodat."
+    }
+  },
+  "preset": {
+    "share-close-sensitive-tabs": "Érzékeny lapok bezárása megosztáskor",
+    "share-hide-private-apps": "Jelszókezelők és üzenetküldők elrejtése megosztáskor",
+    "share-close-invoices": "Számlák és bérpapírok bezárása megosztáskor",
+    "lid-close-adult": "Felnőtt tartalmú lapok bezárása, ha lecsukod a gépet",
+    "away-close-banking": "Banki lapok bezárása 15 perc távollét után",
+    "bank-tab-open-too-long": "A 2 órája nyitott banki lapok bezárásának felajánlása"
+  },
+  "config": {
+    "error": {
+      "duplicate_rule_id": "Ezt az azonosítót már egy másik szabály használja.",
+      "empty_when": "Válassz legalább egy eseményt, amelyre a szabály figyel.",
+      "empty_targets": "Válassz legalább egyfajta elemet, amelyet nézzen.",
+      "countdown_not_allowed": "Visszaszámlálás csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem.",
+      "empty_composite": "Ebben a csoportban nincs feltétel. Adj hozzá egyet, vagy töröld a csoportot.",
+      "lone_not": "A „Nem” egymagában szinte mindenre illik. Tedd egy „Mindegyik” csoportba egy másik feltétel mellé.",
+      "invalid_glob": "Ez a minta hibás. Nézd meg, hogy minden [ és { le van-e zárva.",
+      "invalid_domain": "Csak a domaint írd be, például otpbank.hu, https:// és útvonal nélkül.",
+      "unsupported_version": "Ezt a beállítást a Close Call egy újabb verziója írta. Frissítsd az alkalmazást, hogy szerkeszthesd.",
+      "unknown": "Hiba itt: {{field}} ({{code}})."
+    }
+  },
+  "reason": {
+    "unknown": "Okkód: {{key}}",
+    "automation_missing": "A Close Call még nem vezérelheti ezt az alkalmazást, ezért az egész alkalmazást elrejtette.",
+    "unsaved_hidden": "Nem mentett változtatás volt benne, ezért bezárás helyett elrejtette.",
+    "unsaved_skipped": "Nem mentett változtatás volt benne, ezért nyitva hagyta.",
+    "untitled_hidden": "Még sosem volt elmentve, és az alkalmazás nem tudja mappába menteni, ezért elrejtette.",
+    "firefox_no_tab_close": "A Firefoxban látható billentyűparancs nélkül nem lehet egy lapot bezárni, ezért a Firefoxot rejtette el.",
+    "no_tab_close": "Ebben a böngészőben nem lehet egyenként lapot bezárni, ezért az ablakát rejtette el.",
+    "changed_before_action": "Közvetlenül előtte megváltozott (másik oldal vagy fájl lett), ezért nem nyúlt hozzá.",
+    "gone": "Már be volt zárva.",
+    "timeout": "Az alkalmazás nem válaszolt időben.",
+    "permission_missing": "A Kisegítő lehetőségek hozzáférés ki van kapcsolva, ezért a Close Call nem látja és nem zárja be az ablakokat.",
+    "elevated_window": "Az ablak rendszergazdaként fut, és a Windows nem engedi, hogy más alkalmazás bezárja.",
+    "kept_by_user": "A visszaszámláláskor a „Megtartom” gombot választottad.",
+    "not_while_sharing": "Megosztás közben soha nem kér engedélyt.",
+    "unsupported": "Ez az alkalmazás ezt nem engedi.",
+    "experimental_off": "Kísérleti funkció, ki van kapcsolva.",
+    "watcher_noisy": "Akkor is jelez, amikor semmi sem történik, gyakran egy dokkoló vagy egy képernyőfelvevő miatt. Csak tippként használja.",
+    "symbol_missing": "A rendszer ezen verzióján nem érhető el. A pánikgomb, a kivetítő és a fedél ettől még működik.",
+    "x11_no_share_detection": "X11 alatt nem derül ki, ha valaki rögzíti a képernyőt. Megosztás előtt nyomd meg a pánikgombot.",
+    "private_not_restorable": "A privát lapokat soha nem nyitja meg újra, hogy ne kerüljenek az előzményeid közé."
+  },
+  "note": {
+    "unknown": "Korlátozott: {{key}}",
+    "tab_hide_minimizes": "Kis méretre teszi a lap ablakát, vagy átvált egy ártalmatlan szomszédos lapra.",
+    "safari_private_unknown": "Nem tudja megkülönböztetni a privát ablakokat a normálisaktól.",
+    "firefox_session_file": "A munkamenetfájlból olvas, körülbelül 15 másodperces késéssel, privát ablakok nélkül. Lapok bezárása helyett a Firefoxot rejti el.",
+    "firefox_no_tab_close": "Nem tud egyenként lapot bezárni.",
+    "sheet_by_role": "A mentési párbeszédablakban a gomb szerepe alapján választ, így bármilyen nyelven működik.",
+    "autosave_discard_hides": "A „Bezárás mentés nélkül” helyett elrejt, mert ezek az alkalmazások maguktól mentenek.",
+    "minimize_animates": "A kis méretre tétel animálva megy a Dockba, ez a megosztott képernyőn is látszik.",
+    "app_hide_all_windows": "Csak akkor rejti el az egész alkalmazást, ha minden ablaka illik a szabályra.",
+    "needs_automation": "Engedély kell hozzá az alkalmazás vezérléséhez.",
+    "url_active_tab_only": "Csak az aktív lap címét látja.",
+    "elevated_skipped": "A rendszergazdaként futó ablakokat kihagyja.",
+    "atspi_restart_browser": "Be kell kapcsolni az asztali akadálymentességet, és újra kell indítani a böngészőt."
+  },
+  "source": {
+    "share_watcher": "Képernyőmegosztás észlelése",
+    "notify_proc": "Azonnali megosztásjelzés",
+    "display": "Kivetítő és tükrözés",
+    "call_audio": "Használatban lévő mikrofon és kamera",
+    "power": "Alvás és fedél",
+    "lock": "Képernyőzár",
+    "idle": "Tétlenségi idő"
+  },
+  "health": {
+    "ok": "Működik",
+    "unavailable": "Nem érhető el",
+    "noisy": "Megbízhatatlan"
+  },
+  "permission": {
+    "accessibility": "Kisegítő lehetőségek",
+    "notifications": "Értesítések",
+    "toolkit_accessibility": "Asztali akadálymentesség",
+    "allow": "Engedélyezés",
+    "open_settings": "Rendszerbeállítások megnyitása",
+    "not_while_sharing": "Megosztás közben nem: a kérdés a megosztott képernyőn jelenne meg.",
+    "status": {
+      "granted": "Engedélyezve",
+      "denied": "Elutasítva",
+      "not_determined": "Még nem kérdezte",
+      "app_not_running": "Megkérdezi, ha megnyitod",
+      "not_applicable": "Nem kell"
+    }
+  },
+  "activity": {
+    "title": "Napló",
+    "lead": "Csak a memóriában van: kilépéskor törlődik, és {{duration}} ideig lehet visszaállítani.",
+    "empty_title": "Még nem történt semmi",
+    "empty_body": "Ha a Close Call bezár vagy elrejt valamit, itt látod, az okával együtt.",
+    "dry_run": "Próba",
+    "restore": "Visszaállítás",
+    "restored": "Visszaállítva",
+    "not_restorable": "Nem állítható vissza"
+  },
+  "capability": {
+    "close": "{{kinds}} bezárása",
+    "hide": "{{kinds}} elrejtése",
+    "minimize": "{{kinds}} kis méretre tétele",
+    "quit": "{{kinds}} leállítása",
+    "notify_only": "{{kinds}} jelzése"
+  },
+  "provider": {
+    "chromium": "Chrome és Chromium-alapú böngészők",
+    "safari": "Safari",
+    "firefox": "Firefox",
+    "documents": "Dokumentumok",
+    "apps": "Alkalmazások és ablakok"
+  },
+  "support": {
+    "full": "Működik",
+    "partial": "Részben",
+    "unsupported": "Nem lehetséges"
+  },
+  "settings": {
+    "title": "Beállítások",
+    "general": "Általános",
+    "language": "Nyelv",
+    "language_system": "A rendszerrel egyező",
+    "login": "Indítás bejelentkezéskor",
+    "login_hint": "A Close Call csak akkor véd, ha fut. A menüsorban kap helyet.",
+    "hotkey": "Pánikgomb",
+    "hotkey_hint": "Bármelyik alkalmazásból azonnal elpakol, akkor is, ha ez az ablak zárva van.",
+    "hotkey_record": "Új rögzítése",
+    "hotkey_press": "Nyomd le az új billentyűparancsot…",
+    "hotkey_clear": "Törlés",
+    "hotkey_none": "Nincs billentyűparancs",
+    "confidence": "Képernyőmegosztás észlelése",
+    "confidence_hint": "Mennyire legyen biztos a rendszer, mielőtt a megosztási szabályok közbelépnek.",
+    "confidence_low": "Alacsony: tippekre is reagál, több a téves riasztás",
+    "confidence_medium": "Közepes: ajánlott",
+    "confidence_high": "Magas: csak biztos megosztásra",
+    "untitled_dir": "Mappa a még sosem mentett dokumentumoknak",
+    "untitled_dir_hint": "A „Mentés, aztán bezárás” ide ment, ha az alkalmazás engedi.",
+    "restore_window": "Visszaállítás ennyi ideig",
+    "restore_window_hint": "A bezárt elemek címe ennyi ideig marad a memóriában, lemezre soha nem kerül.",
+    "protection": "Védelem",
+    "protection_lead": "A védett elemekhez soha nem nyúl, bármit mondanak a szabályok.",
+    "protected_categories": "Védett kategóriák",
+    "protected_apps": "Védett alkalmazások",
+    "protected_apps_hint": "Csomagazonosító vagy az alkalmazás neve.",
+    "protected_domains": "Védett domainek",
+    "protected_domains_hint": "Az aldomainek is védettek.",
+    "protect_audible": "Hangot lejátszó lapok védelme",
+    "protect_audible_hint": "Megmarad a lap, amelyben a zenéd vagy egy videóhívás szól.",
+    "protect_pinned": "Kitűzött lapok védelme",
+    "protect_pinned_hint": "A kitűzött lapokat általában szándékosan tartod nyitva.",
+    "list_add": "Hozzáadás",
+    "list_remove": "{{item}} törlése",
+    "list_empty": "Még nincs.",
+    "permissions": "Engedélyek",
+    "permissions_lead": "A Close Call minden indításkor ellenőrzi őket.",
+    "capabilities": "Mit látok ezen a gépen",
+    "capabilities_lead": "Mit tud itt a Close Call, alkalmazásonként. A „Részben” azt jelenti, hogy a jelzett korláttal működik.",
+    "about": "Névjegy",
+    "version": "Verzió: {{version}} ({{platform}})",
+    "no_network": "A Close Call soha nem csatlakozik az internethez: nincs fiók, nincs telemetria, nincs frissítéskeresés. Amit lát, az ezen a gépen marad.",
+    "licence": "Szabad szoftver a GNU General Public License 3-as vagy újabb változata szerint. A mellékelt listák megtartják a saját licencüket.",
+    "source": "Forráskód",
+    "rerun_setup": "Első beállítás újra",
+    "list_licences": "Mellékelt listák"
+  },
+  "onboarding": {
+    "title": "Első beállítás",
+    "progress": "{{current}}. lépés / {{total}}",
+    "back": "Vissza",
+    "next": "Tovább",
+    "finish": "Védelem indítása",
+    "steps": {
+      "welcome": "Üdv",
+      "accessibility": "Kisegítő lehetőségek",
+      "automation": "Böngészők és alkalmazások",
+      "notifications": "Értesítések",
+      "os": "Rendszerbeállítások",
+      "dry_run": "Próbafutás",
+      "login": "Indítás bejelentkezéskor"
+    },
+    "welcome": {
+      "title": "Pakold el, amit nem akarsz megmutatni",
+      "body": "A Close Call bezárja vagy elrejti az érzékeny lapokat, dokumentumokat és alkalmazásokat, amint megosztod a képernyődet, csatlakoztatsz egy kivetítőt vagy lecsukod a gépet, illetve amikor megnyomod a pánikgombot.",
+      "promise_title": "Soha nem csatlakozik az internethez",
+      "promise_body": "Nincs fiók, nincs telemetria, nincs frissítéskeresés. A listák az alkalmazással együtt érkeznek, és amit lát, az ezen a gépen marad.",
+      "source": "Forráskód megnyitása",
+      "language": "Nyelv",
+      "preset": "Kezdés",
+      "preset_recommended": "Az ajánlott szabályokkal",
+      "preset_recommended_hint": "Megosztáskor bezárja a banki, levelező, egészségügyi és felnőtt tartalmú lapokat, elrejti a jelszókezelőket és az üzenetküldőket, és bezárja a számlákat. Később bármelyik szabályt átírhatod.",
+      "preset_empty": "Szabályok nélkül",
+      "preset_empty_hint": "Amíg nem írsz szabályt, a Close Call csak figyel."
+    },
+    "accessibility": {
+      "title": "Engedd, hogy a Close Call lássa az ablakaidat",
+      "body": "A macOS a Kisegítő lehetőségekhez kér hozzáférést, hogy a Close Call kiolvashassa az ablakok címét és a megnyitott dokumentumot, és be is zárhassa őket. A képernyőd rögzítéséhez soha nem kér engedélyt.",
+      "button": "Kisegítő lehetőségek megnyitása",
+      "waiting": "Kapcsold be a Close Callt a Rendszerbeállításokban. Ez az oldal magától frissül.",
+      "granted": "A Kisegítő lehetőségek engedélyezve."
+    },
+    "automation": {
+      "title": "Engedélyezd a böngészőket és a dokumentumkezelőket",
+      "body": "A macOS alkalmazásonként egyszer kérdez, hogy a Close Call egy-egy lapot vagy dokumentumot bezárhasson anélkül, hogy a többihez nyúlna. Csak azokhoz kér engedélyt, amelyeket a szabályaid érintenek, és megosztás közben soha."
+    },
+    "notifications": {
+      "title": "Kapj rövid jelzést minden elpakolás után",
+      "body": "Csak darabszámok, például „3 bezárva, 1 elrejtve”. Cím, webcím vagy fájlnév soha."
+    },
+    "os": {
+      "title": "Ezeket érdemes átállítani a Rendszerbeállításokban",
+      "body": "A Close Call soha nem módosít rendszerbeállítást. Ezek a gombok a megfelelő helyre visznek.",
+      "open": "Megnyitás",
+      "dnd": "Értesítések némítása megosztás közben",
+      "dnd_hint": "Egy üzenet előnézete felugorhat a megosztott képernyőn, mielőtt bármi elrejthetné.",
+      "password": "Jelszó kérése rögtön alvás után",
+      "password_hint": "Különben ébresztéskor a feloldás előtt látszik az asztalod.",
+      "window_share": "Egy ablakot ossz meg, ne az egész képernyőt",
+      "window_share_hint": "Ha Zoomban, Teamsben vagy Meetben csak egy ablakot választasz, minden más rejtve marad, már az első képkockától."
+    },
+    "dry_run": {
+      "title": "Ezt tenném most",
+      "body": "A szabályaid a most nyitott dolgokra, mintha épp indulna egy megosztás. Semmihez nem nyúl.",
+      "nothing": "Most nincs nyitva semmi érzékeny.",
+      "again": "Újra"
+    },
+    "login": {
+      "title": "Induljon a géppel együtt",
+      "body": "A Close Call csak akkor véd, ha fut. A menüsorban kap helyet, és nem használ hálózatot.",
+      "toggle": "Indítás bejelentkezéskor"
+    }
+  }
+}

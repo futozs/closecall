@@ -1,0 +1,662 @@
+{
+  "app": {
+    "name": "Close Call",
+    "tagline": "Did I close it?"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "dismiss": "Dismiss",
+    "error": "That didn't work. Close Call's engine didn't answer; try again in a moment.",
+    "startup_error": "Close Call couldn't start its settings window: {{error}}"
+  },
+  "platform": {
+    "macos": "macOS",
+    "windows": "Windows",
+    "linux": "Linux"
+  },
+  "nav": {
+    "label": "Sections",
+    "home": "Status",
+    "rules": "Rules",
+    "categories": "Categories",
+    "activity": "Activity",
+    "settings": "Settings"
+  },
+  "shell": {
+    "skip": "Skip to content",
+    "watching": "Watching",
+    "sharing": "Screen is shared, guard on",
+    "mirrored": "Display mirrored, guard on",
+    "paused": "Paused until {{time}}"
+  },
+  "confidence": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high"
+  },
+  "home": {
+    "state": {
+      "idle": "Watching",
+      "sharing": "Sharing now",
+      "mirrored": "Mirroring now",
+      "paused": "Paused"
+    },
+    "title": {
+      "idle": "Nothing is being shared",
+      "sharing": "Your screen is being shared",
+      "mirrored": "This screen is mirrored to another display",
+      "paused": "Paused until {{time}}"
+    },
+    "body": {
+      "idle": "Close Call acts the moment a share starts, a projector connects or the lid closes. Until then it only watches.",
+      "sharing": "Guard is on. Anything sensitive that opens now gets closed or hidden straight away.",
+      "mirrored": "Guard is on. Anything sensitive that opens on this screen gets closed or hidden straight away.",
+      "paused": "Nothing is closed automatically until then. The panic hotkey still works."
+    },
+    "confidence": "{{level}} confidence",
+    "call_likely": "A call looks like it's about to start. Now is a good moment to clean up.",
+    "clean_now": "Clean up now",
+    "simulate": "Simulate a screen share",
+    "pause_label": "Pause automatic cleanup",
+    "pause_15": "Pause 15 min",
+    "pause_60": "Pause 1 hour",
+    "resume": "Resume now",
+    "panic_done": "Cleaned up",
+    "see_activity": "See activity",
+    "sim": {
+      "title": "If a screen share started now",
+      "lead": "Dry run. Nothing has been touched yet.",
+      "nothing": "Nothing would be touched: no open item matches a rule armed by a screen share.",
+      "run": "Do it for real",
+      "done": "Simulated share finished"
+    },
+    "open_now": "Open right now",
+    "open_now_lead": "What the panic hotkey would close or hide this minute.",
+    "sensitive_one": "{{count}} sensitive item is open",
+    "sensitive_other": "{{count}} sensitive items are open",
+    "sensitive_none": "Nothing sensitive is open.",
+    "preflight": "Pre-flight check",
+    "preflight_lead": "What Close Call needs to act in time.",
+    "check": {
+      "access": "Access",
+      "apps": "Apps Close Call may control",
+      "watching": "Watching for",
+      "rules": "Rules",
+      "rules_active_one": "{{count}} active",
+      "rules_active_other": "{{count}} active",
+      "rules_none": "None active",
+      "rules_open": "Set up rules"
+    },
+    "last_run": "Last run",
+    "last_run_none": "Nothing has run yet. Press the panic hotkey or simulate a share to see what happens."
+  },
+  "run": {
+    "done_one": "{{count}} done",
+    "done_other": "{{count}} done",
+    "fell_back_one": "{{count}} handled more gently",
+    "fell_back_other": "{{count}} handled more gently",
+    "skipped_one": "{{count}} skipped",
+    "skipped_other": "{{count}} skipped",
+    "failed_one": "{{count}} failed",
+    "failed_other": "{{count}} failed",
+    "nothing": "Nothing needed doing"
+  },
+  "plan": {
+    "close": "Would close",
+    "hide": "Would hide",
+    "minimize": "Would minimize",
+    "quit": "Would quit",
+    "notify_only": "Would tell you"
+  },
+  "action_past": {
+    "close": "Closed",
+    "hide": "Hidden",
+    "minimize": "Minimized",
+    "quit": "Quit",
+    "notify_only": "Reported"
+  },
+  "outcome": {
+    "fell_back": "{{action}} instead",
+    "skipped": "Skipped",
+    "failed": "Failed"
+  },
+  "evidence": {
+    "why": "Why:",
+    "category": "{{category}}, via {{via}}",
+    "domain": "domain {{domain}}",
+    "url_glob": "URL pattern {{glob}}",
+    "title_contains": "title contains “{{keyword}}”",
+    "app": "app {{app}}",
+    "file_glob": "file pattern {{glob}}",
+    "doc_kind": "{{kind}} document",
+    "private": "private window",
+    "open_longer_than": "open longer than {{duration}}"
+  },
+  "doc_kind": {
+    "pdf": "PDF",
+    "image": "Image",
+    "word": "Word",
+    "excel": "Excel",
+    "power_point": "PowerPoint",
+    "pages": "Pages",
+    "keynote": "Keynote",
+    "numbers": "Numbers",
+    "text": "Text",
+    "other": "Other"
+  },
+  "fired": {
+    "panic": "Panic hotkey",
+    "screen_share": "Screen share",
+    "display_mirrored": "Projector or mirroring",
+    "call_likely": "Call about to start",
+    "will_sleep": "Going to sleep",
+    "lid_closed": "Lid closed",
+    "locked": "Screen locked",
+    "away": "Away for {{duration}}",
+    "idle": "Idle for {{duration}}",
+    "item_age": "Open for {{duration}}"
+  },
+  "when": {
+    "panic": "Panic hotkey",
+    "screen_share": "Screen share starts",
+    "display_mirrored": "Projector or mirroring",
+    "call_likely": "A call is about to start",
+    "will_sleep": "Computer goes to sleep",
+    "lid_closed": "Lid closes",
+    "locked": "Screen locks",
+    "away_longer_than": "Away longer than",
+    "idle_longer_than": "Idle longer than",
+    "item_open_longer_than": "An item is open longer than"
+  },
+  "when_short": {
+    "panic": "panic hotkey",
+    "screen_share": "screen share",
+    "display_mirrored": "projector",
+    "call_likely": "call starting",
+    "will_sleep": "sleep",
+    "lid_closed": "lid closed",
+    "locked": "screen lock",
+    "away_longer_than": "away for {{duration}}",
+    "idle_longer_than": "idle for {{duration}}",
+    "item_open_longer_than": "open for {{duration}}"
+  },
+  "target": {
+    "tab": "Browser tabs",
+    "document": "Documents",
+    "app_window": "App windows",
+    "process": "Whole apps"
+  },
+  "target_hint": {
+    "tab": "One tab at a time, in Chrome, Safari, Edge, Brave, Arc and Firefox.",
+    "document": "PDFs, Word files and other open documents.",
+    "app_window": "Single windows, such as a chat window.",
+    "process": "Every window of an app at once."
+  },
+  "target_plural": {
+    "tab": "tabs",
+    "document": "documents",
+    "app_window": "app windows",
+    "process": "apps"
+  },
+  "action": {
+    "close": "Close",
+    "hide": "Hide",
+    "minimize": "Minimize",
+    "quit": "Quit the app",
+    "notify_only": "Only tell me"
+  },
+  "action_hint": {
+    "close": "Tabs and documents can be restored from Activity for a while.",
+    "hide": "Instant and lossless. The app keeps running in the background.",
+    "minimize": "Sends the window to the Dock. It animates, so it's a last resort.",
+    "quit": "Quits the whole app. Never part of the recommended rules.",
+    "notify_only": "Nothing is touched; you get a notification with a count."
+  },
+  "unsaved": {
+    "save_then_close": "Save, then close",
+    "hide": "Hide instead of closing",
+    "skip_and_notify": "Leave it open and tell me",
+    "discard": "Close without saving"
+  },
+  "unsaved_hint": {
+    "save_then_close": "Never-saved documents go to {{folder}} where the app allows it. Otherwise they are hidden.",
+    "hide": "The document stays open with its changes, out of sight.",
+    "skip_and_notify": "Nothing happens to it; you get a notification.",
+    "discard": "Unsaved changes are lost. Use it only for documents you never edit."
+  },
+  "confirm": {
+    "never": "Act immediately",
+    "countdown": "Count down first, with a Keep button"
+  },
+  "matcher": {
+    "kind_label": "Condition",
+    "kind": {
+      "category": "Category",
+      "domain": "Domain",
+      "url_glob": "URL pattern",
+      "title_contains": "Title contains",
+      "app": "App",
+      "file_glob": "File pattern",
+      "doc_kind": "Document type",
+      "private": "Private window",
+      "any": "Any of",
+      "all": "All of",
+      "not": "Not"
+    },
+    "group_hint": {
+      "any": "matches when at least one condition below does",
+      "all": "matches only when every condition below does",
+      "not": "matches when the condition below doesn't"
+    },
+    "private_hint": "Incognito and private windows, where the browser tells us.",
+    "title_placeholder": "invoice",
+    "app_by": "Identify the app by",
+    "app": {
+      "bundle_id": "Bundle ID",
+      "name": "Name",
+      "exe": "Program file",
+      "desktop_id": "Desktop ID"
+    },
+    "add": "Add condition",
+    "remove": "Remove condition",
+    "summary": {
+      "private": "private windows",
+      "title_contains": "titles containing “{{keyword}}”",
+      "doc_kind": "{{kind}} documents",
+      "not": "anything but {{inner}}"
+    }
+  },
+  "rules": {
+    "title": "Rules",
+    "lead": "Each rule says when to act, what to look at, and what to do with it.",
+    "new": "New rule",
+    "count_one": "{{count}} rule, {{active}} active",
+    "count_other": "{{count}} rules, {{active}} active",
+    "enabled_label": "{{name}} enabled",
+    "matches": "Matches {{what}}",
+    "except": "except {{what}}",
+    "toggle_failed": "Couldn't save this change.",
+    "summary": {
+      "close": "{{when}}: close {{targets}}",
+      "hide": "{{when}}: hide {{targets}}",
+      "minimize": "{{when}}: minimize {{targets}}",
+      "quit": "{{when}}: quit {{targets}}",
+      "notify_only": "{{when}}: tell me about open {{targets}}"
+    },
+    "empty_title": "No rules yet",
+    "empty_body": "Without rules Close Call only watches. Start from the recommended set or write your own.",
+    "use_recommended": "Use the recommended rules",
+    "reset": "Restore the recommended rules",
+    "reset_confirm": "This replaces all your rules with the recommended set.",
+    "reset_yes": "Replace my rules"
+  },
+  "editor": {
+    "back": "All rules",
+    "title_new": "New rule",
+    "id": "ID {{id}}",
+    "issues_one": "{{count}} thing to fix before this rule can be saved.",
+    "issues_other": "{{count}} things to fix before this rule can be saved.",
+    "other_issues_one": "Another rule has a problem too ({{count}}). Open it from the list to fix it.",
+    "other_issues_other": "Other rules have problems too ({{count}}). Open them from the list to fix them.",
+    "name": "Name",
+    "name_hint": "Shown in Activity when this rule acts. Leave it empty to keep the suggested name.",
+    "name_placeholder": "For example: Close the payroll portal when sharing",
+    "when": "When",
+    "when_hint": "Any of these arms the rule.",
+    "share_hint": "Uses the detection confidence set in Settings.",
+    "targets": "Look at",
+    "match": "Match",
+    "match_hint": "What makes an item sensitive. Protected items are never touched, whatever this says.",
+    "except": "Except",
+    "except_hint": "Items that match this are left alone.",
+    "except_add": "Add an exception",
+    "action": "Then",
+    "quit_warning": "Quitting closes every document of the app under the unsaved-changes setting below. Some apps reopen their documents the next time they start.",
+    "on_unsaved": "If a document has unsaved changes",
+    "on_unsaved_hint": "Unknown means unsaved: Close Call never guesses with your work.",
+    "confirm": "Before acting",
+    "confirm_hint": "A countdown lets you keep the item. It only works for idle and open-too-long triggers.",
+    "confirm_not_allowed": "A countdown is only possible when every trigger is idle or open-too-long. During a share or lock there is no time to ask, and a dialog would show on the shared screen.",
+    "save": "Save rule",
+    "delete": "Delete rule",
+    "delete_confirm": "Delete this rule? This can't be undone.",
+    "delete_yes": "Delete"
+  },
+  "duration": {
+    "unit": "Unit",
+    "s_one": "second",
+    "s_other": "seconds",
+    "m_one": "minute",
+    "m_other": "minutes",
+    "h_one": "hour",
+    "h_other": "hours",
+    "d_one": "day",
+    "d_other": "days"
+  },
+  "categories": {
+    "title": "Categories",
+    "lead": "The lists rules refer to. Built-in lists ship with each release; Close Call never downloads anything.",
+    "yours": "Your categories",
+    "new": "New category",
+    "empty_title": "No categories of your own yet",
+    "empty_body": "Group the sites, apps and files that are sensitive for you, such as your employer's payroll portal, then use the group in a rule.",
+    "builtin": "Built-in",
+    "builtin_lead": "Snapshots of public lists plus hand-checked entries. Categories that no rule uses do nothing.",
+    "protected": "Always protected",
+    "used_by_one": "Used by {{count}} rule",
+    "used_by_other": "Used by {{count}} rules",
+    "unused": "Not used by any rule",
+    "domains_one": "{{n}} domain",
+    "domains_other": "{{n}} domains",
+    "apps_one": "{{n}} app",
+    "apps_other": "{{n}} apps",
+    "keywords_one": "{{n}} title keyword",
+    "keywords_other": "{{n}} title keywords",
+    "files_one": "{{n}} file pattern",
+    "files_other": "{{n}} file patterns",
+    "nothing": "Empty",
+    "sources_one": "{{count}} source",
+    "sources_other": "{{count}} sources",
+    "source_line": "{{license}} · {{entries}} entries · snapshot {{date}}",
+    "back": "All categories",
+    "editor": {
+      "title_new": "New category",
+      "name": "Name",
+      "id": "ID",
+      "id_hint": "Lowercase letters, digits and underscores. Rules refer to the category by this.",
+      "id_invalid": "Use only lowercase letters, digits and underscores.",
+      "id_taken": "A category with this ID already exists.",
+      "domains": "Domains",
+      "domains_hint": "One per line, without https://. Subdomains count too.",
+      "apps": "Apps",
+      "apps_hint": "One per line: a bundle ID such as com.apple.Notes, or the app's name.",
+      "keywords": "Title keywords",
+      "keywords_hint": "One per line. Case and accents don't matter.",
+      "files": "File patterns",
+      "files_hint": "One per line, such as **/*payslip*.pdf",
+      "save": "Save category",
+      "delete": "Delete category",
+      "delete_confirm": "Delete this category? This can't be undone.",
+      "delete_used_one": "{{count}} rule uses this category; its conditions will match nothing. Delete anyway?",
+      "delete_used_other": "{{count}} rules use this category; their conditions will match nothing. Delete anyway?",
+      "delete_yes": "Delete"
+    }
+  },
+  "category": {
+    "adult": {
+      "name": "Adult",
+      "description": "Adult sites, from two public blocklists merged and deduplicated."
+    },
+    "banking": {
+      "name": "Banking",
+      "description": "Netbanks and bank sites (Hungarian banks checked by hand), plus “Internetbank”-style window titles."
+    },
+    "webmail": {
+      "name": "Webmail",
+      "description": "Gmail, Outlook, Proton, Freemail, Citromail and other mail in the browser."
+    },
+    "medical": {
+      "name": "Health",
+      "description": "Patient portals such as EESZT, lab results and health titles. Hand-curated: no open health list exists."
+    },
+    "financial": {
+      "name": "Finance",
+      "description": "Brokers, payment and investment sites."
+    },
+    "dating": {
+      "name": "Dating",
+      "description": "Dating sites and apps."
+    },
+    "gambling": {
+      "name": "Gambling",
+      "description": "Betting, casino and lottery sites."
+    },
+    "password_managers": {
+      "name": "Password managers",
+      "description": "Passwords, Keychain Access, 1Password, Bitwarden and similar apps."
+    },
+    "messengers": {
+      "name": "Messengers",
+      "description": "Messages, Signal, WhatsApp, Telegram, Slack and similar apps."
+    },
+    "invoices": {
+      "name": "Invoices and payslips",
+      "description": "Documents named like számla, invoice, bérjegyzék, payslip or bank statement."
+    },
+    "meeting": {
+      "name": "Meeting apps",
+      "description": "Zoom, Teams, Meet, FaceTime, Webex, Discord and OBS. Protected so a cleanup never ends your call."
+    }
+  },
+  "preset": {
+    "share-close-sensitive-tabs": "Close sensitive tabs when sharing",
+    "share-hide-private-apps": "Hide password managers and messengers when sharing",
+    "share-close-invoices": "Close invoices and payslips when sharing",
+    "lid-close-adult": "Close adult tabs when the lid closes",
+    "away-close-banking": "Close banking tabs after 15 minutes away",
+    "bank-tab-open-too-long": "Offer to close banking tabs open for 2 hours"
+  },
+  "config": {
+    "error": {
+      "duplicate_rule_id": "Another rule already uses this ID.",
+      "empty_when": "Pick at least one trigger.",
+      "empty_targets": "Pick at least one kind of item to look at.",
+      "countdown_not_allowed": "A countdown only works when every trigger is idle or open-too-long.",
+      "empty_composite": "This group has no conditions. Add one or remove the group.",
+      "lone_not": "“Not” on its own matches almost everything. Combine it with another condition under “All of”.",
+      "invalid_glob": "This pattern isn't valid. Check that every [ and { is closed.",
+      "invalid_domain": "Enter a bare domain such as otpbank.hu, without https:// or a path.",
+      "unsupported_version": "This configuration was written by a newer Close Call. Update the app to edit it.",
+      "unknown": "Problem with {{field}} ({{code}})."
+    }
+  },
+  "reason": {
+    "unknown": "Reason code: {{key}}",
+    "automation_missing": "Close Call isn't allowed to control this app yet, so it hid the whole app.",
+    "unsaved_hidden": "It had unsaved changes, so it was hidden instead of closed.",
+    "unsaved_skipped": "It had unsaved changes, so it was left open.",
+    "untitled_hidden": "It was never saved and the app can't save it to a folder, so it was hidden.",
+    "firefox_no_tab_close": "Firefox can't close single tabs without a visible shortcut, so Firefox was hidden.",
+    "no_tab_close": "This browser can't close single tabs, so its window was hidden.",
+    "changed_before_action": "It changed right before acting (another page or file), so it was left alone.",
+    "gone": "It was already closed.",
+    "timeout": "The app didn't respond in time.",
+    "permission_missing": "Accessibility access is off, so Close Call can't see or close windows.",
+    "elevated_window": "The window runs as administrator, and Windows doesn't let other apps close it.",
+    "kept_by_user": "You chose Keep during the countdown.",
+    "not_while_sharing": "Permission prompts are never shown during a share.",
+    "unsupported": "This app doesn't allow that action.",
+    "experimental_off": "Experimental, switched off.",
+    "watcher_noisy": "Reports activity even when nothing is happening, often because of a dock or a recording tool. Used only as a hint.",
+    "symbol_missing": "Not available on this version of the system. The hotkey, projector and lid triggers still work.",
+    "x11_no_share_detection": "X11 can't tell when the screen is captured. Use the panic hotkey before sharing.",
+    "private_not_restorable": "Private tabs are never reopened, so they don't end up in your history."
+  },
+  "note": {
+    "unknown": "Limited: {{key}}",
+    "tab_hide_minimizes": "Minimizes the tab's window, or switches to a safe neighbour tab.",
+    "safari_private_unknown": "Can't tell private windows apart from normal ones.",
+    "firefox_session_file": "Reads the session file, about 15 seconds behind, without private windows. Hides Firefox instead of closing tabs.",
+    "firefox_no_tab_close": "Can't close single tabs.",
+    "sheet_by_role": "Save dialogs are answered by button role, so it works in any language.",
+    "autosave_discard_hides": "“Close without saving” hides instead, because these apps save on their own.",
+    "minimize_animates": "Minimizing animates into the Dock, visible on a shared screen.",
+    "app_hide_all_windows": "Hides the whole app only when every one of its windows matches.",
+    "needs_automation": "Needs permission to control the app.",
+    "url_active_tab_only": "Sees the address of the active tab only.",
+    "elevated_skipped": "Windows running as administrator are skipped.",
+    "atspi_restart_browser": "Needs desktop accessibility on and a browser restart."
+  },
+  "source": {
+    "share_watcher": "Screen-share detection",
+    "notify_proc": "Instant share signal",
+    "display": "Projector and mirroring",
+    "call_audio": "Microphone and camera in use",
+    "power": "Sleep and lid",
+    "lock": "Screen lock",
+    "idle": "Idle time"
+  },
+  "health": {
+    "ok": "Working",
+    "unavailable": "Unavailable",
+    "noisy": "Unreliable"
+  },
+  "permission": {
+    "accessibility": "Accessibility",
+    "notifications": "Notifications",
+    "toolkit_accessibility": "Desktop accessibility",
+    "allow": "Allow",
+    "open_settings": "Open System Settings",
+    "not_while_sharing": "Not while sharing: the prompt would show on the shared screen.",
+    "status": {
+      "granted": "Granted",
+      "denied": "Denied",
+      "not_determined": "Not asked yet",
+      "app_not_running": "Asks when you open it",
+      "not_applicable": "Not needed"
+    }
+  },
+  "activity": {
+    "title": "Activity",
+    "lead": "Kept in memory only. It's gone when you quit Close Call, and restore works for {{duration}}.",
+    "empty_title": "Nothing has happened yet",
+    "empty_body": "When Close Call closes or hides something, it shows up here with the reason.",
+    "dry_run": "Dry run",
+    "restore": "Restore",
+    "restored": "Restored",
+    "not_restorable": "Can't be restored"
+  },
+  "capability": {
+    "close": "close {{kinds}}",
+    "hide": "hide {{kinds}}",
+    "minimize": "minimize {{kinds}}",
+    "quit": "quit {{kinds}}",
+    "notify_only": "report {{kinds}}"
+  },
+  "provider": {
+    "chromium": "Chrome and Chromium browsers",
+    "safari": "Safari",
+    "firefox": "Firefox",
+    "documents": "Documents",
+    "apps": "Apps and windows"
+  },
+  "support": {
+    "full": "Works",
+    "partial": "Partly",
+    "unsupported": "Not possible"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "language": "Language",
+    "language_system": "Same as the system",
+    "login": "Open at login",
+    "login_hint": "Close Call can only protect you while it's running. It sits in the menu bar.",
+    "hotkey": "Panic hotkey",
+    "hotkey_hint": "Cleans up at once, from any app, even with this window closed.",
+    "hotkey_record": "Record new",
+    "hotkey_press": "Press the new shortcut…",
+    "hotkey_clear": "Remove",
+    "hotkey_none": "No hotkey",
+    "confidence": "Screen-share detection",
+    "confidence_hint": "How sure the system must be before share rules act.",
+    "confidence_low": "Low: also reacts to hints, more false alarms",
+    "confidence_medium": "Medium: recommended",
+    "confidence_high": "High: only certain shares",
+    "untitled_dir": "Folder for never-saved documents",
+    "untitled_dir_hint": "Used by “Save, then close” where the app allows it.",
+    "restore_window": "Keep restore available for",
+    "restore_window_hint": "Titles and addresses of closed items stay in memory this long, never on disk.",
+    "protection": "Protection",
+    "protection_lead": "Protected items are never touched, whatever the rules say.",
+    "protected_categories": "Protected categories",
+    "protected_apps": "Protected apps",
+    "protected_apps_hint": "Bundle ID or app name.",
+    "protected_domains": "Protected domains",
+    "protected_domains_hint": "Subdomains are protected too.",
+    "protect_audible": "Protect tabs playing sound",
+    "protect_audible_hint": "Keeps the tab with your music or a video call.",
+    "protect_pinned": "Protect pinned tabs",
+    "protect_pinned_hint": "Pinned tabs are usually the ones you keep open on purpose.",
+    "list_add": "Add",
+    "list_remove": "Remove {{item}}",
+    "list_empty": "None yet.",
+    "permissions": "Permissions",
+    "permissions_lead": "Checked every time Close Call starts.",
+    "capabilities": "What I can see on this computer",
+    "capabilities_lead": "What Close Call can do here, app by app. Partly means it works with the limit shown.",
+    "about": "About",
+    "version": "Version {{version}} for {{platform}}",
+    "no_network": "Close Call never connects to the internet: no accounts, no telemetry, no update checks. Everything it sees stays on this computer.",
+    "licence": "Free software under the GNU General Public License, version 3 or later. The bundled lists keep their own licences.",
+    "source": "Source code",
+    "rerun_setup": "Run setup again",
+    "list_licences": "Bundled lists"
+  },
+  "onboarding": {
+    "title": "Setup",
+    "progress": "Step {{current}} of {{total}}",
+    "back": "Back",
+    "next": "Continue",
+    "finish": "Start protecting",
+    "steps": {
+      "welcome": "Welcome",
+      "accessibility": "Accessibility",
+      "automation": "Browsers and apps",
+      "notifications": "Notifications",
+      "os": "System settings",
+      "dry_run": "Dry run",
+      "login": "Open at login"
+    },
+    "welcome": {
+      "title": "Close what you'd rather nobody saw",
+      "body": "Close Call closes or hides sensitive tabs, documents and apps the moment you share your screen, plug in a projector or close the lid, or when you press the panic hotkey.",
+      "promise_title": "It never connects to the internet",
+      "promise_body": "No accounts, no telemetry, no update checks. The lists it uses ship inside the app, and what it sees stays on this computer.",
+      "source": "Read the source code",
+      "language": "Language",
+      "preset": "Start with",
+      "preset_recommended": "The recommended rules",
+      "preset_recommended_hint": "When you share: closes banking, webmail, health and adult tabs, hides password managers and messengers, closes invoices. You can change every rule later.",
+      "preset_empty": "No rules",
+      "preset_empty_hint": "Close Call only watches until you write a rule."
+    },
+    "accessibility": {
+      "title": "Let Close Call see your windows",
+      "body": "macOS asks for Accessibility access so Close Call can read window titles and which document is open, and close them. It never asks to record your screen.",
+      "button": "Open Accessibility settings",
+      "waiting": "Switch on Close Call in System Settings. This page updates by itself.",
+      "granted": "Accessibility is on."
+    },
+    "automation": {
+      "title": "Allow each browser and document app",
+      "body": "macOS asks once per app, so Close Call can close one tab or document without touching the rest. It asks only for apps your rules touch, and never during a share."
+    },
+    "notifications": {
+      "title": "Get a short note after each cleanup",
+      "body": "Only counts, like “3 closed, 1 hidden”. Never titles, addresses or file names."
+    },
+    "os": {
+      "title": "Worth changing in System Settings",
+      "body": "Close Call never changes system settings. These take you to the right place.",
+      "open": "Open",
+      "dnd": "Silence notifications while sharing",
+      "dnd_hint": "A message preview can pop up on the shared screen before anything can hide it.",
+      "password": "Ask for the password right after sleep",
+      "password_hint": "Otherwise waking the computer shows your desktop before you unlock it.",
+      "window_share": "Share a window, not the whole screen",
+      "window_share_hint": "In Zoom, Teams and Meet, picking one window keeps everything else private from the first frame."
+    },
+    "dry_run": {
+      "title": "This is what I would do right now",
+      "body": "Your rules against what's open, as if a share started now. Nothing is touched.",
+      "nothing": "Nothing sensitive is open right now.",
+      "again": "Check again"
+    },
+    "login": {
+      "title": "Start with your computer",
+      "body": "Close Call can only protect you while it's running. It lives in the menu bar and uses no network.",
+      "toggle": "Open at login"
+    }
+  }
+}

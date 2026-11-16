@@ -1,0 +1,28 @@
+{
+  "tray": {
+    "open": "Open Close Call…",
+    "clean_now": "Clean up now",
+    "pause_15": "Pause for 15 minutes",
+    "pause_60": "Pause for 1 hour",
+    "resume": "Resume",
+    "status_idle": "Watching, nothing shared",
+    "status_sharing": "Screen shared, guard on",
+    "quit": "Quit Close Call"
+  },
+  "notify": {
+    "run_title": "Close Call cleaned up",
+    "run_body": {
+      "done_one": "{{count}} closed",
+      "done_other": "{{count}} closed",
+      "hidden_one": "{{count}} hidden",
+      "hidden_other": "{{count}} hidden",
+      "skipped_one": "{{count}} left open",
+      "skipped_other": "{{count}} left open",
+      "separator": ", "
+    },
+    "unsaved_hidden_one": "{{count}} document with unsaved changes was hidden, not closed.",
+    "unsaved_hidden_other": "{{count}} documents with unsaved changes were hidden, not closed.",
+    "permission_missing": "Close Call lost a permission it needs. Open it to see what changed.",
+    "share_detected": "Screen share detected. Guard is on."
+  }
+}
