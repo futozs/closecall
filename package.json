@@ -6,5 +6,8 @@
     "dev": "bun run --cwd app tauri dev",
     "build": "bun run --cwd app tauri build",
     "check": "bun run --cwd app check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8"
   }
 }

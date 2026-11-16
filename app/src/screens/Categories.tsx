@@ -51,40 +51,53 @@ function BuiltinRow({ info }: { info: CategoryInfo }) {
   return (
     <li className="py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="font-semibold">{categoryName(t, info.id)}</h3>
+        <h3 className="flex flex-wrap items-baseline gap-x-2 font-semibold">
+          {categoryName(t, info.id)}
+          {!info.default_enabled && (
+            <span className="rounded-ctl border border-rule-strong px-1.5 text-xs font-medium text-ink-2">
+              {t("categories.opt_in")}
+            </span>
+          )}
+        </h3>
         <UsedBy id={info.id} />
       </div>
       <p className="mt-0.5 max-w-prose text-sm text-ink-2">
         {t(`category.${info.id}.description`, { defaultValue: "" })}
       </p>
-      <details className="group mt-2">
-        <summary className="inline-flex cursor-default list-none items-center gap-1.5 rounded-ctl text-sm text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
-          <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+      {info.sources.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-2">
           <Counts domains={info.domain_count} apps={info.app_count} keywords={info.keyword_count} />
-          <span className="text-ink-3">· {t("categories.sources", { count: info.sources.length })}</span>
-        </summary>
-        <ul className="mt-2 ml-5 grid gap-2 border-l border-rule pl-4 text-sm">
-          {info.sources.map((source) => (
-            <li key={source.id}>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 font-medium underline decoration-rule-strong underline-offset-3 hover:decoration-current"
-                onClick={() => void ipc.openUrl(source.url)}
-              >
-                {source.name}
-                <ExternalIcon className="size-3" />
-              </button>
-              <span className="data block text-ink-2">
-                {t("categories.source_line", {
-                  license: source.license,
-                  entries: formatNumber(source.entries, locale),
-                  date: source.snapshot_date,
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </details>
+        </p>
+      ) : (
+        <details className="group mt-2">
+          <summary className="inline-flex cursor-default list-none items-center gap-1.5 rounded-ctl text-sm text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+            <Counts domains={info.domain_count} apps={info.app_count} keywords={info.keyword_count} />
+            <span className="text-ink-3">· {t("categories.sources", { count: info.sources.length })}</span>
+          </summary>
+          <ul className="mt-2 ml-5 grid gap-2 border-l border-rule pl-4 text-sm">
+            {info.sources.map((source) => (
+              <li key={source.id}>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-left font-medium underline decoration-rule-strong underline-offset-3 hover:decoration-current"
+                  onClick={() => void ipc.openUrl(source.url)}
+                >
+                  {source.name}
+                  <ExternalIcon className="size-3" />
+                </button>
+                <span className="data block text-ink-2">
+                  {t("categories.source_line", {
+                    license: source.license,
+                    entries: formatNumber(source.entries, locale),
+                    date: source.snapshot_date,
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </li>
   );
 }

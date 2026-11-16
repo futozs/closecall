@@ -9,27 +9,11 @@ const share = { kind: "screen_share", confidence: "high" } as const;
 beforeEach(() => installMock());
 afterEach(() => clearMocks());
 
-describe("wire decoding", () => {
-  test("u64 fields arrive as numbers and leave ipc.ts as bigint", () => {
-    const report = ipc.decodeRunReport({
-      run_id: 7,
-      at_ms: 1_700_000_000_000,
-      trigger: { kind: "item_age", target: 42, age: "2h" },
-      dry_run: false,
-      restorable: true,
-      steps: [],
-    });
-    expect(report.run_id).toBe(7n);
-    expect(report.at_ms).toBe(1_700_000_000_000n);
-    expect(report.trigger).toEqual({ kind: "item_age", target: 42n, age: "2h" });
-  });
-});
-
 describe("browser mock", () => {
   test("status reports permissions the way onboarding expects", async () => {
     const status = await ipc.getStatus();
     expect(status.platform).toBe("macos");
-    expect(typeof status.last_run?.run_id).toBe("bigint");
+    expect(typeof status.last_run?.run_id).toBe("number");
     const byKind = status.permissions.map((state) => [state.permission, state.status]);
     expect(byKind).toContainEqual([{ kind: "accessibility" }, "granted"]);
     expect(byKind).toContainEqual([
@@ -52,6 +36,15 @@ describe("browser mock", () => {
     expect(await ipc.getActivity()).toHaveLength(2);
   });
 
+  test("private tabs close on a share through their own preset rule", async () => {
+    const report = await ipc.preview(share);
+    const incognito = report.steps.find((step) =>
+      step.because.some((reason) => reason.evidence.kind === "private"),
+    );
+    expect(incognito?.because).toEqual([{ rule: "private-windows-on-share", evidence: { kind: "private" } }]);
+    expect(incognito?.action).toBe("close");
+  });
+
   test("conceal steps come before tab and document closes", async () => {
     const phases = (await ipc.preview(share)).steps.map((step) => step.phase);
     expect(phases).toEqual([...phases].sort((a, b) => order(a) - order(b)));
@@ -60,13 +53,15 @@ describe("browser mock", () => {
   test("turning a rule off changes the plan", async () => {
     const config = await ipc.getConfig();
     const tabsRule = "share-close-sensitive-tabs";
-    expect((await ipc.preview(share)).steps.some((step) => step.summary.kind === "tab")).toBe(true);
+    const planned = async () =>
+      (await ipc.preview(share)).steps.flatMap((step) => step.because.map((reason) => reason.rule));
+    expect(await planned()).toContain(tabsRule);
     const issues = await ipc.saveConfig({
       ...config,
       rule: config.rule.map((rule) => (rule.id === tabsRule ? { ...rule, enabled: false } : rule)),
     });
     expect(issues).toEqual([]);
-    expect((await ipc.preview(share)).steps.some((step) => step.summary.kind === "tab")).toBe(false);
+    expect(await planned()).not.toContain(tabsRule);
   });
 
   test("an invalid config is rejected with issue codes and not saved", async () => {
@@ -101,8 +96,9 @@ describe("browser mock", () => {
       action: "hide",
       reason_key: "reason.automation_missing",
     });
+    // The default unsaved policy saves a file-backed document, then closes it.
     const word = report.steps.find((step) => step.summary.app_name === "Microsoft Word");
-    expect(word?.outcome).toEqual({ kind: "fell_back", action: "hide", reason_key: "reason.unsaved_hidden" });
+    expect(word?.outcome).toEqual({ kind: "done" });
     expect((await ipc.getActivity())[0]?.run_id).toBe(report.run_id);
     await vi.waitFor(() => expect(events.map((event) => event.run_id)).toEqual([report.run_id]));
   });
@@ -116,6 +112,20 @@ describe("browser mock", () => {
     const report = await ipc.simulate(share);
     const chrome = report.steps.filter((step) => step.summary.app_name === "Google Chrome");
     expect(chrome.every((step) => step.outcome?.kind === "done")).toBe(true);
+  });
+
+  test("asking an app that is not running defers the prompt", async () => {
+    const outcome = await ipc.requestPermission({
+      kind: "automation",
+      bundle_id: "company.thebrowser.Browser",
+      app_name: "Arc",
+    });
+    expect(outcome).toEqual({ kind: "app_not_running" });
+  });
+
+  test("only the broad UT1 categories are opt-in", async () => {
+    const optIn = (await ipc.listCategories()).filter((info) => !info.default_enabled).map((info) => info.id);
+    expect(optIn).toEqual(["financial", "dating", "gambling"]);
   });
 
   test("restore is one-shot", async () => {

@@ -72,7 +72,7 @@ function HotkeyField() {
       ) : (
         <>
           {keys ? (
-            <Keys keys={keys} label={config.panic_hotkey ?? undefined} />
+            <Keys keys={keys} label={config.panic_hotkey} />
           ) : (
             <span className="text-ink-2">{t("settings.hotkey_none")}</span>
           )}
@@ -80,7 +80,7 @@ function HotkeyField() {
             {t("settings.hotkey_record")}
           </Button>
           {keys && (
-            <Button size="sm" variant="ghost" onClick={() => void save({ panic_hotkey: null })}>
+            <Button size="sm" variant="ghost" onClick={() => void save({ panic_hotkey: "" })}>
               {t("settings.hotkey_clear")}
             </Button>
           )}

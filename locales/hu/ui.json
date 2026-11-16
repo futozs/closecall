@@ -129,8 +129,7 @@
     "app": "alkalmazás: {{app}}",
     "file_glob": "fájlminta: {{glob}}",
     "doc_kind": "dokumentumtípus: {{kind}}",
-    "private": "privát ablak",
-    "open_longer_than": "több mint {{duration}} óta nyitva"
+    "private": "privát ablak"
   },
   "doc_kind": {
     "pdf": "PDF",
@@ -341,7 +340,8 @@
     "empty_title": "Még nincs saját kategóriád",
     "empty_body": "Gyűjtsd egy csoportba azokat az oldalakat, alkalmazásokat és fájlokat, amelyek neked érzékenyek, például a munkahelyed bérszámfejtő portálját, aztán használd a csoportot egy szabályban.",
     "builtin": "Beépített",
-    "builtin_lead": "Nyilvános listák pillanatképei és kézzel ellenőrzött bejegyzések. Amelyiket egy szabály sem használja, az nem csinál semmit.",
+    "builtin_lead": "Nyilvános listák pillanatképei és kézzel ellenőrzött bejegyzések. Amelyiket egy szabály sem használja, az nem csinál semmit; a választhatókat az ajánlott szabályok sem használják.",
+    "opt_in": "Választható",
     "protected": "Mindig védett",
     "used_by_one": "{{count}} szabály használja",
     "used_by_other": "{{count}} szabály használja",
@@ -385,7 +385,7 @@
   "category": {
     "adult": {
       "name": "Felnőtt tartalom",
-      "description": "Felnőtt oldalak két nyilvános tiltólistából, összefésülve, ismétlődések nélkül."
+      "description": "Felnőtt oldalak nyilvános tiltólistákból, összefésülve, ismétlődések nélkül."
     },
     "banking": {
       "name": "Bank",
@@ -434,7 +434,8 @@
     "share-close-invoices": "Számlák és bérpapírok bezárása megosztáskor",
     "lid-close-adult": "Felnőtt tartalmú lapok bezárása, ha lecsukod a gépet",
     "away-close-banking": "Banki lapok bezárása 15 perc távollét után",
-    "bank-tab-open-too-long": "A 2 órája nyitott banki lapok bezárásának felajánlása"
+    "bank-tab-open-too-long": "A 2 órája nyitott banki lapok bezárásának felajánlása",
+    "private-windows-on-share": "Privát és inkognitó lapok bezárása megosztáskor"
   },
   "config": {
     "error": {
@@ -508,6 +509,7 @@
     "allow": "Engedélyezés",
     "open_settings": "Rendszerbeállítások megnyitása",
     "not_while_sharing": "Megosztás közben nem: a kérdés a megosztott képernyőn jelenne meg.",
+    "asks_when_open": "Most nem fut. A Close Call rákérdez, amint megnyitod.",
     "status": {
       "granted": "Engedélyezve",
       "denied": "Elutasítva",
@@ -617,7 +619,7 @@
       "language": "Nyelv",
       "preset": "Kezdés",
       "preset_recommended": "Az ajánlott szabályokkal",
-      "preset_recommended_hint": "Megosztáskor bezárja a banki, levelező, egészségügyi és felnőtt tartalmú lapokat, elrejti a jelszókezelőket és az üzenetküldőket, és bezárja a számlákat. Később bármelyik szabályt átírhatod.",
+      "preset_recommended_hint": "Megosztáskor bezárja a banki, levelező, egészségügyi és felnőtt tartalmú lapokat, valamint minden privát lapot, elrejti a jelszókezelőket és az üzenetküldőket, és bezárja a számlákat. Később bármelyik szabályt átírhatod.",
       "preset_empty": "Szabályok nélkül",
       "preset_empty_hint": "Amíg nem írsz szabályt, a Close Call csak figyel."
     },

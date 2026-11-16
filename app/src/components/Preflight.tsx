@@ -23,14 +23,17 @@ export function PermissionRow({ state }: { state: PermissionState }) {
   const { t } = useTranslation();
   const { status, setStatus } = useAppData();
   const [asking, setAsking] = useState(false);
+  // macOS asks for Automation only while the app runs; the engine asks again when it starts.
+  const [waitingForApp, setWaitingForApp] = useState(false);
   const { permission } = state;
   const app = permission.kind === "automation" ? permission.app_name : "";
   const label = permission.kind === "automation" ? app : t(`permission.${permission.kind}`);
-  const canAsk = state.status === "not_determined" || state.status === "denied";
+  const canAsk = (state.status === "not_determined" || state.status === "denied") && !waitingForApp;
   const ask = async () => {
     setAsking(true);
     try {
-      await ipc.requestPermission(permission);
+      const outcome = await ipc.requestPermission(permission);
+      setWaitingForApp(outcome.kind === "app_not_running");
       setStatus(await ipc.getStatus());
     } finally {
       setAsking(false);
@@ -41,6 +44,7 @@ export function PermissionRow({ state }: { state: PermissionState }) {
       state={PERMISSION_MARK[state.status]}
       label={label}
       value={t(`permission.status.${state.status}`, { app })}
+      detail={waitingForApp ? t("permission.asks_when_open") : undefined}
       action={
         canAsk && (
           <Button

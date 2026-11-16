@@ -5,7 +5,6 @@ import type { StepReport } from "../bindings/StepReport";
 import type { TargetKindTag } from "../bindings/TargetKindTag";
 import { describeEvidence, keyedMessage, ruleName } from "../evidence";
 import { hostOf } from "../format";
-import { useAppData } from "../store";
 import { AppIcon, DocumentIcon, TabIcon, WindowIcon } from "./icons";
 
 export function KindIcon({ kind, className }: { kind: TargetKindTag; className?: string }) {
@@ -86,7 +85,6 @@ function where(step: StepReport): string | null {
 
 export function RunSteps({ report, rules }: { report: RunReport; rules: Rule[] }) {
   const { t } = useTranslation();
-  const { locale } = useAppData();
   const ruleById = new Map(rules.map((rule) => [rule.id, rule]));
   return (
     <ul className="divide-y divide-rule">
@@ -94,7 +92,7 @@ export function RunSteps({ report, rules }: { report: RunReport; rules: Rule[] }
         const note = outcomeNote(step, t);
         const place = where(step);
         return (
-          <li key={String(step.target)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 py-3">
+          <li key={step.target} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 py-3">
             <KindIcon kind={step.summary.kind} className="mt-0.5 size-4 text-ink-2" />
             <div className="min-w-0">
               <p className="truncate font-medium" title={step.summary.title}>
@@ -116,7 +114,7 @@ export function RunSteps({ report, rules }: { report: RunReport; rules: Rule[] }
                   return (
                     <span key={`${reason.rule}-${JSON.stringify(reason.evidence)}`}>
                       {i > 0 && "; "}
-                      <span className="text-ink">{describeEvidence(reason.evidence, t, locale)}</span>
+                      <span className="text-ink">{describeEvidence(reason.evidence, t)}</span>
                       {" · "}
                       {rule ? ruleName(t, rule) : reason.rule}
                     </span>

@@ -12,23 +12,19 @@ beforeAll(async () => {
 describe("describeEvidence", () => {
   test("names the category and the matcher that hit, in English", async () => {
     await i18next.changeLanguage("en");
-    expect(describeEvidence(banking, i18next.t, "en")).toBe("Banking, via domain otpbank.hu");
+    expect(describeEvidence(banking, i18next.t)).toBe("Banking, via domain otpbank.hu");
     expect(
       describeEvidence(
         { kind: "category", id: "invoices", via: { kind: "title_contains", keyword: "számla" } },
         i18next.t,
-        "en",
       ),
     ).toBe("Invoices and payslips, via title contains “számla”");
   });
 
   test("reads naturally in Hungarian", async () => {
     await i18next.changeLanguage("hu");
-    expect(describeEvidence(banking, i18next.t, "hu")).toBe("Bank (domain: otpbank.hu)");
-    expect(describeEvidence({ kind: "open_longer_than", threshold: "2h" }, i18next.t, "hu")).toBe(
-      "több mint 2 óra óta nyitva",
-    );
-    expect(describeEvidence({ kind: "private" }, i18next.t, "hu")).toBe("privát ablak");
+    expect(describeEvidence(banking, i18next.t)).toBe("Bank (domain: otpbank.hu)");
+    expect(describeEvidence({ kind: "private" }, i18next.t)).toBe("privát ablak");
   });
 
   test("falls back to the raw id for an unknown category", async () => {
@@ -37,7 +33,6 @@ describe("describeEvidence", () => {
       describeEvidence(
         { kind: "category", id: "payroll", via: { kind: "app", app: "Kulcs-Bér" } },
         i18next.t,
-        "en",
       ),
     ).toBe("payroll, via app Kulcs-Bér");
   });
@@ -64,5 +59,9 @@ describe("engine message keys", () => {
       "Banki lapok bezárása 15 perc távollét után",
     );
     expect(ruleName(i18next.t, { id: "rule-7", name: "Munkahelyi bérportál" })).toBe("Munkahelyi bérportál");
+    expect(
+      ruleName(i18next.t, { id: "private-windows-on-share", name: "preset.private-windows-on-share" }),
+    ).toBe("Privát és inkognitó lapok bezárása megosztáskor");
+    expect(ruleName(i18next.t, { id: "gone", name: "preset.gone" })).toBe("gone");
   });
 });

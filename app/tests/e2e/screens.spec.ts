@@ -102,7 +102,8 @@ for (const { lang, locale, ui } of LANGUAGES) {
       const errors = await open(page, "/#categories");
       await expect(page.getByRole("heading", { level: 1, name: ui.categories.title })).toBeVisible();
       await page.locator("summary").first().click();
-      await expect(page.getByRole("button", { name: /StevenBlack/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: "HaGeZi NSFW" })).toBeVisible();
+      await expect(page.getByText(ui.categories.opt_in, { exact: true })).toHaveCount(3);
       await shot(page, info, "categories", lang);
       await page.getByRole("link", { name: ui.categories.new }).click();
       await expect(

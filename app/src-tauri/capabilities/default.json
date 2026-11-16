@@ -3,5 +3,36 @@
   "identifier": "default",
   "description": "Permissions for the settings window. Only our own commands and named plugin permissions.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-get-config",
+    "allow-save-config",
+    "allow-reset-config",
+    "allow-get-status",
+    "allow-preview",
+    "allow-run-panic",
+    "allow-simulate",
+    "allow-get-activity",
+    "allow-restore",
+    "allow-get-permissions",
+    "allow-request-permission",
+    "allow-get-capabilities",
+    "allow-list-categories",
+    "allow-pause",
+    "allow-resume",
+    "autostart:allow-is-enabled",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "x-apple.systempreferences:*" },
+        { "url": "https://github.com/futozs/closecall*" },
+        { "url": "https://raw.githubusercontent.com/StevenBlack/hosts/*" },
+        { "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/*" },
+        { "url": "https://raw.githubusercontent.com/olbat/ut1-blacklists/*" }
+      ]
+    }
+  ]
 }

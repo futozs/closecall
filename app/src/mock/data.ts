@@ -10,13 +10,12 @@ import type { SignalSourceStatus } from "../bindings/SignalSourceStatus";
 import type { Support } from "../bindings/Support";
 import type { TargetKindTag } from "../bindings/TargetKindTag";
 import type { TargetSummary } from "../bindings/TargetSummary";
-import type { Wire } from "../ipc";
 
 const shareTriggers: Rule["when"] = ["panic", "screen_share", "display_mirrored"];
 
 function presetRule(rule: Pick<Rule, "id" | "when" | "targets" | "match" | "action"> & Partial<Rule>): Rule {
   return {
-    name: null,
+    name: `preset.${rule.id}`,
     enabled: true,
     except: null,
     on_unsaved: "save_then_close",
@@ -25,7 +24,7 @@ function presetRule(rule: Pick<Rule, "id" | "when" | "targets" | "match" | "acti
   };
 }
 
-/** Mirrors the recommended preset in docs/research/architecture-recommendation.md §4.4. */
+/** Mirrors `Config::recommended()` in crates/core/src/config.rs. */
 export function recommendedConfig(): Config {
   return {
     version: 1,
@@ -52,6 +51,13 @@ export function recommendedConfig(): Config {
         action: "close",
       }),
       presetRule({
+        id: "private-windows-on-share",
+        when: shareTriggers,
+        targets: ["tab"],
+        match: "private",
+        action: "close",
+      }),
+      presetRule({
         id: "share-hide-private-apps",
         when: shareTriggers,
         targets: ["app_window", "process"],
@@ -64,7 +70,6 @@ export function recommendedConfig(): Config {
         targets: ["document"],
         match: { category: "invoices" },
         action: "close",
-        on_unsaved: "hide",
       }),
       presetRule({
         id: "lid-close-adult",
@@ -100,14 +105,23 @@ export interface MockItem {
   id: number;
   kind: TargetKindTag;
   summary: TargetSummary;
-  category: string;
+  /** `null` for an item that only a `private` matcher catches. */
+  category: string | null;
   via: Evidence;
+  private?: boolean;
   /** Bundle id whose Automation grant the provider needs to act on this item. */
   automation?: string;
   dirty?: boolean;
 }
 
-function tab(id: number, app: string, title: string, url: string, category: string, via: Evidence): MockItem {
+function tab(
+  id: number,
+  app: string,
+  title: string,
+  url: string | null,
+  category: string | null,
+  via: Evidence,
+): MockItem {
   return {
     id,
     kind: "tab",
@@ -142,6 +156,10 @@ export const inventory: MockItem[] = [
     kind: "domain",
     domain: "eeszt.gov.hu",
   }),
+  {
+    ...tab(104, "Google Chrome", "Új inkognitólap", null, null, { kind: "private" }),
+    private: true,
+  },
   {
     id: 201,
     kind: "document",
@@ -260,95 +278,86 @@ export const capabilities: CapabilityReport = {
 };
 
 function source(id: string, name: string, url: string, license: string, entries: number) {
-  return { id, name, url, license, snapshot_date: "2026-11-09", entries };
+  return { id, name, url, license, snapshot_date: "2026-11-16", entries };
 }
 
-const seed = (entries: number) =>
+const raw = "https://raw.githubusercontent.com";
+const stevenBlack = (list: string, id: string, name: string, license: string, entries: number) =>
   source(
-    "closecall-seed",
-    "Close Call seed list",
-    "https://github.com/futozs/closecall",
-    "GPL-3.0-or-later",
+    id,
+    `${name} (via StevenBlack/hosts)`,
+    `${raw}/StevenBlack/hosts/master/extensions/porn/${list}/hosts`,
+    license,
     entries,
   );
 const ut1 = (list: string, entries: number) =>
-  source(`ut1-${list}`, `UT1 ${list}`, "https://dsi.ut-capitole.fr/blacklists/", "CC BY-SA 4.0", entries);
+  source(
+    `ut1-${list}`,
+    `UT1 blacklists: ${list}`,
+    `${raw}/olbat/ut1-blacklists/master/blacklists/${list}/domains`,
+    "CC-BY-SA-4.0",
+    entries,
+  );
+const seed = (category: string, entries: number) =>
+  source(
+    `seed-${category}`,
+    `Close Call ${category} seed`,
+    `https://github.com/futozs/closecall/blob/main/lists/seeds/${category}.txt`,
+    "GPL-3.0-or-later",
+    entries,
+  );
 
+function builtin(
+  id: string,
+  counts: Pick<CategoryInfo, "domain_count" | "app_count" | "keyword_count">,
+  sources: CategoryInfo["sources"] = [],
+  default_enabled = true,
+): CategoryInfo {
+  return { id, builtin: true, default_enabled, ...counts, sources };
+}
+
+/** Same order and sources as crates/lists and lists/manifest.toml. */
 export const categories: CategoryInfo[] = [
-  {
-    id: "adult",
-    builtin: true,
-    domain_count: 141_206,
-    app_count: 0,
-    keyword_count: 0,
-    sources: [
-      source(
-        "stevenblack-porn",
-        "StevenBlack hosts, porn-only",
-        "https://github.com/StevenBlack/hosts",
-        "MIT",
-        76_811,
-      ),
-      source("hagezi-nsfw", "HaGeZi NSFW", "https://github.com/hagezi/dns-blocklists", "GPL-3.0", 83_101),
-    ],
-  },
-  {
-    id: "banking",
-    builtin: true,
-    domain_count: 6_684,
-    app_count: 0,
-    keyword_count: 3,
-    sources: [ut1("bank", 6_646), seed(38)],
-  },
-  {
-    id: "webmail",
-    builtin: true,
-    domain_count: 431,
-    app_count: 2,
-    keyword_count: 0,
-    sources: [ut1("webmail", 413), seed(18)],
-  },
-  { id: "medical", builtin: true, domain_count: 27, app_count: 0, keyword_count: 9, sources: [seed(27)] },
-  {
-    id: "financial",
-    builtin: true,
-    domain_count: 473,
-    app_count: 0,
-    keyword_count: 0,
-    sources: [ut1("financial", 473)],
-  },
-  {
-    id: "dating",
-    builtin: true,
-    domain_count: 10_564,
-    app_count: 0,
-    keyword_count: 0,
-    sources: [ut1("dating", 10_564)],
-  },
-  {
-    id: "gambling",
-    builtin: true,
-    domain_count: 47_823,
-    app_count: 0,
-    keyword_count: 0,
-    sources: [ut1("gambling", 47_823)],
-  },
-  {
-    id: "password_managers",
-    builtin: true,
-    domain_count: 0,
-    app_count: 14,
-    keyword_count: 0,
-    sources: [seed(14)],
-  },
-  { id: "messengers", builtin: true, domain_count: 0, app_count: 16, keyword_count: 0, sources: [seed(16)] },
-  { id: "invoices", builtin: true, domain_count: 0, app_count: 0, keyword_count: 11, sources: [seed(11)] },
-  { id: "meeting", builtin: true, domain_count: 12, app_count: 9, keyword_count: 0, sources: [seed(21)] },
+  builtin("adult", { domain_count: 166_763, app_count: 0, keyword_count: 0 }, [
+    source(
+      "hagezi-nsfw",
+      "HaGeZi NSFW",
+      `${raw}/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt`,
+      "GPL-3.0",
+      83_101,
+    ),
+    stevenBlack("sinfonietta", "sinfonietta-porn", "Sinfonietta pornography hosts", "MIT", 61_154),
+    stevenBlack("clefspeare13", "pornhosts", "Clefspeare13 pornhosts", "MIT", 20_155),
+    stevenBlack("bigdargon", "hostsvn-adult", "hostsVN adult", "MIT", 1_961),
+    stevenBlack("tiuxo", "tiuxo-porn", "Tiuxo pornography hosts", "CC-BY-4.0", 369),
+    stevenBlack("sinfonietta-snuff", "sinfonietta-snuff", "Sinfonietta snuff hosts", "MIT", 23),
+  ]),
+  builtin("banking", { domain_count: 6_665, app_count: 0, keyword_count: 3 }, [
+    seed("banking", 20),
+    ut1("bank", 6_645),
+  ]),
+  builtin("webmail", { domain_count: 417, app_count: 0, keyword_count: 0 }, [
+    seed("webmail", 13),
+    ut1("webmail", 404),
+  ]),
+  builtin("medical", { domain_count: 12, app_count: 0, keyword_count: 11 }, [seed("medical", 12)]),
+  builtin("password_managers", { domain_count: 0, app_count: 22, keyword_count: 0 }),
+  builtin("messengers", { domain_count: 5, app_count: 24, keyword_count: 0 }),
+  builtin("invoices", { domain_count: 0, app_count: 0, keyword_count: 10 }),
+  builtin("meeting", { domain_count: 9, app_count: 21, keyword_count: 0 }),
+  builtin("financial", { domain_count: 472, app_count: 0, keyword_count: 0 }, [ut1("financial", 472)], false),
+  builtin("dating", { domain_count: 10_548, app_count: 0, keyword_count: 0 }, [ut1("dating", 10_548)], false),
+  builtin(
+    "gambling",
+    { domain_count: 47_547, app_count: 0, keyword_count: 0 },
+    [ut1("gambling", 47_547)],
+    false,
+  ),
 ];
 
 const minutes = (n: number) => n * 60_000;
 
-export function seedActivity(now: number): Wire<RunReport>[] {
+export function seedActivity(now: number): RunReport[] {
   return [
     {
       run_id: 2,
@@ -381,7 +390,7 @@ export function seedActivity(now: number): Wire<RunReport>[] {
           },
           action: "close",
           phase: "close_tabs",
-          because: [{ rule: "share-close-sensitive-tabs", evidence: { kind: "private" } }],
+          because: [{ rule: "private-windows-on-share", evidence: { kind: "private" } }],
           outcome: { kind: "done" },
         },
         {

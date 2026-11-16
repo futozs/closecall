@@ -1,18 +1,17 @@
 import type { TFunction } from "i18next";
 import type { Evidence } from "./bindings/Evidence";
 import type { Rule } from "./bindings/Rule";
-import { formatDur } from "./format";
 
 export function categoryName(t: TFunction, id: string, userName?: string | null): string {
   return userName || t(`category.${id}.name`, { defaultValue: id });
 }
 
-export function describeEvidence(evidence: Evidence, t: TFunction, locale: string): string {
+export function describeEvidence(evidence: Evidence, t: TFunction): string {
   switch (evidence.kind) {
     case "category":
       return t("evidence.category", {
         category: categoryName(t, evidence.id),
-        via: describeEvidence(evidence.via, t, locale),
+        via: describeEvidence(evidence.via, t),
       });
     case "domain":
       return t("evidence.domain", { domain: evidence.domain });
@@ -28,14 +27,18 @@ export function describeEvidence(evidence: Evidence, t: TFunction, locale: strin
       return t("evidence.doc_kind", { kind: t(`doc_kind.${evidence.doc_kind}`) });
     case "private":
       return t("evidence.private");
-    case "open_longer_than":
-      return t("evidence.open_longer_than", { duration: formatDur(evidence.threshold, locale) });
   }
 }
 
+/** Preset rules are named with a message key (`preset.<id>`), not prose; that is no custom name. */
+export function customName(name: string | null): string | null {
+  return name?.startsWith("preset.") ? null : name;
+}
+
 export function ruleName(t: TFunction, rule: Pick<Rule, "id" | "name">): string {
-  if (rule.name) return rule.name;
-  return t(`preset.${rule.id}`, { defaultValue: rule.id });
+  const custom = customName(rule.name);
+  if (custom) return custom;
+  return t(rule.name ?? `preset.${rule.id}`, { defaultValue: rule.id });
 }
 
 /** Keys from Rust come either bare (`invalid_glob`) or already namespaced. */

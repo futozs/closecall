@@ -133,7 +133,7 @@ export function Home() {
           disabled={flow.step === "busy"}
         >
           {t("home.clean_now")}
-          {hotkey && <Keys keys={hotkey} label={config.panic_hotkey ?? undefined} />}
+          {hotkey && <Keys keys={hotkey} label={config.panic_hotkey} />}
         </Button>
         <Button variant="secondary" size="lg" onClick={previewShare} disabled={flow.step === "busy"}>
           <PlayIcon className="size-4" />

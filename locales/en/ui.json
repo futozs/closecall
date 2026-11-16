@@ -129,8 +129,7 @@
     "app": "app {{app}}",
     "file_glob": "file pattern {{glob}}",
     "doc_kind": "{{kind}} document",
-    "private": "private window",
-    "open_longer_than": "open longer than {{duration}}"
+    "private": "private window"
   },
   "doc_kind": {
     "pdf": "PDF",
@@ -341,7 +340,8 @@
     "empty_title": "No categories of your own yet",
     "empty_body": "Group the sites, apps and files that are sensitive for you, such as your employer's payroll portal, then use the group in a rule.",
     "builtin": "Built-in",
-    "builtin_lead": "Snapshots of public lists plus hand-checked entries. Categories that no rule uses do nothing.",
+    "builtin_lead": "Snapshots of public lists plus hand-checked entries. Categories that no rule uses do nothing; opt-in ones are left out of the recommended rules.",
+    "opt_in": "Opt-in",
     "protected": "Always protected",
     "used_by_one": "Used by {{count}} rule",
     "used_by_other": "Used by {{count}} rules",
@@ -385,7 +385,7 @@
   "category": {
     "adult": {
       "name": "Adult",
-      "description": "Adult sites, from two public blocklists merged and deduplicated."
+      "description": "Adult sites from public blocklists, merged and deduplicated."
     },
     "banking": {
       "name": "Banking",
@@ -434,7 +434,8 @@
     "share-close-invoices": "Close invoices and payslips when sharing",
     "lid-close-adult": "Close adult tabs when the lid closes",
     "away-close-banking": "Close banking tabs after 15 minutes away",
-    "bank-tab-open-too-long": "Offer to close banking tabs open for 2 hours"
+    "bank-tab-open-too-long": "Offer to close banking tabs open for 2 hours",
+    "private-windows-on-share": "Close private and incognito tabs when sharing"
   },
   "config": {
     "error": {
@@ -508,6 +509,7 @@
     "allow": "Allow",
     "open_settings": "Open System Settings",
     "not_while_sharing": "Not while sharing: the prompt would show on the shared screen.",
+    "asks_when_open": "It isn't running. Close Call will ask as soon as you open it.",
     "status": {
       "granted": "Granted",
       "denied": "Denied",
@@ -617,7 +619,7 @@
       "language": "Language",
       "preset": "Start with",
       "preset_recommended": "The recommended rules",
-      "preset_recommended_hint": "When you share: closes banking, webmail, health and adult tabs, hides password managers and messengers, closes invoices. You can change every rule later.",
+      "preset_recommended_hint": "When you share: closes banking, webmail, health and adult tabs and every private tab, hides password managers and messengers, closes invoices. You can change every rule later.",
       "preset_empty": "No rules",
       "preset_empty_hint": "Close Call only watches until you write a rule."
     },

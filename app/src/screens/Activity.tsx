@@ -90,7 +90,7 @@ export function Activity() {
       {failed && <ErrorNote>{t("common.error")}</ErrorNote>}
       {runs?.length === 0 && <EmptyState title={t("activity.empty_title")} body={t("activity.empty_body")} />}
       {runs?.map((report) => (
-        <Run key={String(report.run_id)} report={report} onRestored={replace} />
+        <Run key={report.run_id} report={report} onRestored={replace} />
       ))}
     </div>
   );

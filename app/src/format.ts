@@ -30,8 +30,8 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export function formatWhen(ms: bigint | number, locale: string, now: Date = new Date()): string {
-  const date = new Date(Number(ms));
+export function formatWhen(ms: number, locale: string, now: Date = new Date()): string {
+  const date = new Date(ms);
   const options: Intl.DateTimeFormatOptions = sameDay(date, now)
     ? { hour: "numeric", minute: "2-digit" }
     : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };

@@ -2,7 +2,9 @@ import { emit } from "@tauri-apps/api/event";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import type { Action } from "../bindings/Action";
 import type { Config } from "../bindings/Config";
+import type { Evidence } from "../bindings/Evidence";
 import type { FiredTrigger } from "../bindings/FiredTrigger";
+import type { Matcher } from "../bindings/Matcher";
 import type { Permission } from "../bindings/Permission";
 import type { PermissionState } from "../bindings/PermissionState";
 import type { Phase } from "../bindings/Phase";
@@ -13,7 +15,7 @@ import type { Status } from "../bindings/Status";
 import type { StepOutcome } from "../bindings/StepOutcome";
 import type { StepReport } from "../bindings/StepReport";
 import { hostOf, parseDur } from "../format";
-import { EVENTS, type Wire } from "../ipc";
+import { EVENTS } from "../ipc";
 import { categoriesIn, triggerDur, triggerKind } from "../model";
 import {
   capabilities,
@@ -56,7 +58,7 @@ function armed(rule: Rule, fired: FiredTrigger): boolean {
 
 function isProtected(item: MockItem, config: Config): boolean {
   const { protect } = config;
-  if (protect.categories.includes(item.category)) return true;
+  if (item.category !== null && protect.categories.includes(item.category)) return true;
   if (protect.apps.some((app) => "name" in app && app.name === item.summary.app_name)) return true;
   const host = item.summary.url ? hostOf(item.summary.url) : "";
   return protect.domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
@@ -71,23 +73,32 @@ function phaseFor(item: MockItem, action: Action): Phase {
 interface Planned {
   item: MockItem;
   rule: Rule;
-  step: Wire<StepReport>;
+  step: StepReport;
+}
+
+function mentionsPrivate(matcher: Matcher): boolean {
+  if (matcher === "private") return true;
+  if ("any" in matcher) return matcher.any.some(mentionsPrivate);
+  if ("all" in matcher) return matcher.all.some(mentionsPrivate);
+  return false;
+}
+
+function evidenceFor(rule: Rule, item: MockItem): Evidence | null {
+  if (item.private && mentionsPrivate(rule.match)) return { kind: "private" };
+  if (item.category === null) return null;
+  if (!categoriesIn(rule.match).includes(item.category)) return null;
+  if (categoriesIn(rule.except).includes(item.category)) return null;
+  return { kind: "category", id: item.category, via: item.via };
 }
 
 function plan(fired: FiredTrigger, config: Config): Planned[] {
   const planned = new Map<number, Planned>();
   for (const rule of config.rule.filter((candidate) => armed(candidate, fired))) {
     for (const item of inventory) {
-      const hit =
-        rule.targets.includes(item.kind) &&
-        categoriesIn(rule.match).includes(item.category) &&
-        !categoriesIn(rule.except).includes(item.category) &&
-        !isProtected(item, config);
-      if (!hit) continue;
-      const reason = {
-        rule: rule.id,
-        evidence: { kind: "category" as const, id: item.category, via: item.via },
-      };
+      if (!rule.targets.includes(item.kind) || isProtected(item, config)) continue;
+      const evidence = evidenceFor(rule, item);
+      if (!evidence) continue;
+      const reason = { rule: rule.id, evidence };
       const existing = planned.get(item.id);
       if (existing) {
         existing.step.because.push(reason);
@@ -125,10 +136,16 @@ function outcomeFor({ item, rule }: Planned, perms: PermissionState[]): StepOutc
     }
   }
   if (item.dirty && (rule.action === "close" || rule.action === "quit")) {
-    if (rule.on_unsaved === "hide")
-      return { kind: "fell_back", action: "hide", reason_key: "reason.unsaved_hidden" };
-    if (rule.on_unsaved === "skip_and_notify")
-      return { kind: "skipped", reason_key: "reason.unsaved_skipped" };
+    switch (rule.on_unsaved) {
+      case "hide":
+        return { kind: "fell_back", action: "hide", reason_key: "reason.unsaved_hidden" };
+      case "skip_and_notify":
+        return { kind: "skipped", reason_key: "reason.unsaved_skipped" };
+      case "save_then_close":
+        if (item.summary.path === null)
+          return { kind: "fell_back", action: "hide", reason_key: "reason.untitled_hidden" };
+        break;
+    }
   }
   return { kind: "done" };
 }
@@ -154,7 +171,7 @@ const FIRED_KINDS = new Set([
   "item_age",
 ]);
 
-function isFiredTrigger(value: unknown): value is Wire<FiredTrigger> {
+function isFiredTrigger(value: unknown): value is FiredTrigger {
   return isRecord(value) && typeof value.kind === "string" && FIRED_KINDS.has(value.kind);
 }
 
@@ -176,7 +193,7 @@ export function installMock() {
   let activity = seedActivity(now);
   let nextRunId = 3;
   let autostart = true;
-  let status: Wire<Status> = {
+  let status: Status = {
     platform: "macos",
     app_version: "0.1.0",
     share: {
@@ -192,7 +209,7 @@ export function installMock() {
     signal_sources: signalSources,
     needs_onboarding: query.has("onboarding"),
   };
-  const summarize = (report: Wire<RunReport>) => {
+  const summarize = (report: RunReport) => {
     const count = (kind: StepOutcome["kind"]) =>
       report.steps.filter((step) => step.outcome?.kind === kind).length;
     status = {
@@ -212,21 +229,19 @@ export function installMock() {
   if (firstRun) summarize(firstRun);
 
   // Rust emits after the command has answered; a microtask keeps that order.
-  const announce = (report?: Wire<RunReport>) => {
+  const announce = (report?: RunReport) => {
     queueMicrotask(() => {
       if (report) void emit(EVENTS.run, report);
       void emit(EVENTS.status, status);
     });
   };
 
-  const run = (trigger: Wire<FiredTrigger>, dryRun: boolean): Wire<RunReport> => {
-    const fired: FiredTrigger =
-      trigger.kind === "item_age" ? { ...trigger, target: BigInt(trigger.target) } : trigger;
-    const steps = plan(fired, config).map((planned) => ({
+  const run = (trigger: FiredTrigger, dryRun: boolean): RunReport => {
+    const steps = plan(trigger, config).map((planned) => ({
       ...planned.step,
       outcome: dryRun ? null : outcomeFor(planned, perms),
     }));
-    const report: Wire<RunReport> = {
+    const report: RunReport = {
       run_id: dryRun ? 0 : nextRunId++,
       at_ms: Date.now(),
       trigger,
@@ -292,6 +307,11 @@ export function installMock() {
           return structuredClone(perms);
         case "request_permission": {
           const permission = expect(args.permission, isPermission, "permission");
+          const current = perms.find(
+            (entry) => JSON.stringify(entry.permission) === JSON.stringify(permission),
+          );
+          if (current?.status === "app_not_running")
+            return { kind: "app_not_running" } satisfies RequestOutcome;
           if (permission.kind === "accessibility") {
             setTimeout(() => setPermission(permission, "granted"), 1_500);
             return { kind: "opened_settings" } satisfies RequestOutcome;

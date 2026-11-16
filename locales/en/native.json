@@ -7,6 +7,7 @@
     "resume": "Resume",
     "status_idle": "Watching, nothing shared",
     "status_sharing": "Screen shared, guard on",
+    "status_paused": "Paused, not watching",
     "quit": "Quit Close Call"
   },
   "notify": {

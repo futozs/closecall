@@ -20,8 +20,17 @@ tauri-build.workspace = true
 closecall-core.workspace = true
 closecall-engine.workspace = true
 tauri.workspace = true
+tauri-plugin-autostart.workspace = true
+tauri-plugin-global-shortcut.workspace = true
+tauri-plugin-notification.workspace = true
+tauri-plugin-opener.workspace = true
+tauri-plugin-single-instance.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sys-locale.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

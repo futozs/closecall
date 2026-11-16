@@ -19,7 +19,7 @@
         "height": 680,
         "minWidth": 720,
         "minHeight": 520,
-        "visible": true
+        "visible": false
       }
     ],
     "security": {
@@ -34,6 +34,13 @@
     "category": "Utility",
     "shortDescription": "Closes the sensitive tabs and documents you left open before anyone sees your screen.",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
-    "macOS": { "minimumSystemVersion": "14.0" }
+    "macOS": {
+      "minimumSystemVersion": "14.0",
+      "entitlements": "./Entitlements.plist",
+      "files": {
+        "Resources/en.lproj/InfoPlist.strings": "./en.lproj/InfoPlist.strings",
+        "Resources/hu.lproj/InfoPlist.strings": "./hu.lproj/InfoPlist.strings"
+      }
+    }
   }
 }

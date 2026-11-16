@@ -6,7 +6,7 @@ import type { ValidationIssue } from "../bindings/ValidationIssue";
 import { DurationInput } from "../components/DurationInput";
 import { ChevronLeft } from "../components/icons";
 import { Button, Choice, ErrorNote } from "../components/ui";
-import { issueMessage, ruleName } from "../evidence";
+import { customName, issueMessage, ruleName } from "../evidence";
 import { go } from "../hash";
 import {
   ACTIONS,
@@ -174,7 +174,7 @@ export function RuleEditor({ initial, isNew }: { initial: Rule; isNew: boolean }
         <input
           className="input max-w-md"
           aria-label={t("editor.name")}
-          value={draft.name ?? ""}
+          value={customName(draft.name) ?? ""}
           placeholder={suggested === draft.id ? t("editor.name_placeholder") : suggested}
           onChange={(event) => update({ name: event.target.value || null })}
         />
