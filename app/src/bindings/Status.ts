@@ -4,4 +4,9 @@ import type { RunSummary } from "./RunSummary";
 import type { ShareState } from "./ShareState";
 import type { SignalSourceStatus } from "./SignalSourceStatus";
 
-export type Status = { platform: string, app_version: string, share: ShareState, guard_active: boolean, paused_until_ms: number | null, last_run: RunSummary | null, permissions: Array<PermissionState>, signal_sources: Array<SignalSourceStatus>, needs_onboarding: boolean, };
+export type Status = { platform: string, app_version: string, share: ShareState, guard_active: boolean, paused_until_ms: number | null, last_run: RunSummary | null, permissions: Array<PermissionState>, signal_sources: Array<SignalSourceStatus>, needs_onboarding: boolean, 
+/**
+ * Message key (`config.problem.*`) when `config.toml` was rejected and the recommended
+ * preset runs instead. The file is left as it is until the user saves.
+ */
+config_problem: string | null, };

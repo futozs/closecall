@@ -3,7 +3,7 @@ import type { Rule } from "../bindings/Rule";
 import type { RunReport } from "../bindings/RunReport";
 import type { StepReport } from "../bindings/StepReport";
 import type { TargetKindTag } from "../bindings/TargetKindTag";
-import { describeEvidence, keyedMessage, ruleName } from "../evidence";
+import { describeEvidence, failureMessage, keyedMessage, ruleName } from "../evidence";
 import { hostOf } from "../format";
 import { AppIcon, DocumentIcon, TabIcon, WindowIcon } from "./icons";
 
@@ -47,7 +47,7 @@ export function useCountsText() {
   };
 }
 
-function Outcome({ step }: { step: StepReport }) {
+function Outcome({ step, restore }: { step: StepReport; restore: boolean }) {
   const { t } = useTranslation();
   const outcome = step.outcome;
   if (!outcome) {
@@ -55,7 +55,11 @@ function Outcome({ step }: { step: StepReport }) {
   }
   switch (outcome.kind) {
     case "done":
-      return <span className="text-sm font-medium text-ok">{t(`action_past.${step.action}`)}</span>;
+      return (
+        <span className="text-sm font-medium text-ok">
+          {t(`${restore ? "restore_past" : "action_past"}.${step.action}`)}
+        </span>
+      );
     case "fell_back":
       return (
         <span className="text-sm font-medium text-caution">
@@ -74,7 +78,7 @@ function outcomeNote(step: StepReport, t: ReturnType<typeof useTranslation>["t"]
   if (!outcome) return null;
   if (outcome.kind === "fell_back" || outcome.kind === "skipped")
     return keyedMessage(t, outcome.reason_key, "reason");
-  if (outcome.kind === "failed") return outcome.error;
+  if (outcome.kind === "failed") return failureMessage(t, outcome.error);
   return null;
 }
 
@@ -91,12 +95,16 @@ export function RunSteps({ report, rules }: { report: RunReport; rules: Rule[] }
       {report.steps.map((step) => {
         const note = outcomeNote(step, t);
         const place = where(step);
+        const title = step.summary.title || t("activity.details_cleared");
         return (
           <li key={step.target} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 py-3">
             <KindIcon kind={step.summary.kind} className="mt-0.5 size-4 text-ink-2" />
             <div className="min-w-0">
-              <p className="truncate font-medium" title={step.summary.title}>
-                {step.summary.title}
+              <p
+                className={`truncate font-medium ${step.summary.title ? "" : "text-ink-2"}`}
+                title={step.summary.title || undefined}
+              >
+                {title}
               </p>
               <p className="truncate text-sm text-ink-2">
                 {step.summary.app_name}
@@ -107,24 +115,26 @@ export function RunSteps({ report, rules }: { report: RunReport; rules: Rule[] }
                   </>
                 )}
               </p>
-              <p className="mt-1 text-sm text-ink-2">
-                <span className="text-ink-3">{t("evidence.why")} </span>
-                {step.because.map((reason, i) => {
-                  const rule = ruleById.get(reason.rule);
-                  return (
-                    <span key={`${reason.rule}-${JSON.stringify(reason.evidence)}`}>
-                      {i > 0 && "; "}
-                      <span className="text-ink">{describeEvidence(reason.evidence, t)}</span>
-                      {" · "}
-                      {rule ? ruleName(t, rule) : reason.rule}
-                    </span>
-                  );
-                })}
-              </p>
+              {step.because.length > 0 && (
+                <p className="mt-1 text-sm text-ink-2">
+                  <span className="text-ink-3">{t("evidence.why")} </span>
+                  {step.because.map((reason, i) => {
+                    const rule = ruleById.get(reason.rule);
+                    return (
+                      <span key={`${reason.rule}-${JSON.stringify(reason.evidence)}`}>
+                        {i > 0 && "; "}
+                        <span className="text-ink">{describeEvidence(reason.evidence, t)}</span>
+                        {" · "}
+                        {rule ? ruleName(t, rule) : reason.rule}
+                      </span>
+                    );
+                  })}
+                </p>
+              )}
               {note && <p className="mt-1 text-sm text-caution">{note}</p>}
             </div>
             <div className="pt-0.5 text-right">
-              <Outcome step={step} />
+              <Outcome step={step} restore={report.restore_of !== null} />
             </div>
           </li>
         );

@@ -114,6 +114,17 @@ describe("browser mock", () => {
     expect(chrome.every((step) => step.outcome?.kind === "done")).toBe(true);
   });
 
+  test("a restore is a run of its own that points back at the run it undid", async () => {
+    const run = await ipc.simulate(share);
+    const restored = await ipc.restore(run.run_id);
+    expect(restored.restore_of).toBe(run.run_id);
+    expect(restored.run_id).not.toBe(run.run_id);
+    const activity = await ipc.getActivity();
+    expect(activity[0]?.run_id).toBe(restored.run_id);
+    expect(activity.find((report) => report.run_id === run.run_id)?.restorable).toBe(false);
+    await expect(ipc.restore(run.run_id)).rejects.toThrow();
+  });
+
   test("asking an app that is not running defers the prompt", async () => {
     const outcome = await ipc.requestPermission({
       kind: "automation",

@@ -1,10 +1,10 @@
 //! The engine's shared state and its one fusion thread, which owns signal handling, inventory
 //! updates, share-guard and the timers.
 
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Duration;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError, TryLockError};
+use std::time::{Duration, Instant};
 
 use closecall_core::config::Config;
 use closecall_core::ipc::{RunReport, RunSummary, SignalSourceStatus, Status};
@@ -19,7 +19,7 @@ use closecall_lists::Lists;
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded};
 
 use crate::actor::{ProviderHandle, error_kind, is_permission_missing};
-use crate::exec::{Countdowns, Journal, RunKind, RunRequest};
+use crate::exec::{Countdowns, Journal, RunKind, RunRequest, forget_details, trigger_name};
 use crate::fusion::{Fusion, Now, Outcome};
 use crate::index::Index;
 use crate::store::Problem;
@@ -75,6 +75,12 @@ pub(crate) struct State {
     /// What each target looked like when a run last acted on it, so share-guard does not act
     /// again on an event that only echoes our own change.
     pub acted: HashMap<TargetId, TargetKind>,
+    /// Targets reported as left open while the guard has been on.
+    pub left_open: HashSet<TargetId>,
+    /// The guard triggers that were on after the last signal or tick, by name.
+    pub guarding: BTreeSet<&'static str>,
+    /// Which providers have delivered their first snapshot.
+    pub reported: Vec<bool>,
 }
 
 impl State {
@@ -91,11 +97,23 @@ impl State {
         self.last_run_id += 1;
         self.last_run_id
     }
+
+    /// The echo filter and the left-open set only make sense while the guard is on.
+    fn forget_guard_episode(&mut self, now: Now) {
+        if !self.guard_active(now) {
+            self.acted.clear();
+            self.left_open.clear();
+        }
+    }
 }
 
 pub(crate) struct Core {
     pub state: Mutex<State>,
+    /// Signalled when a provider delivers its first snapshot.
+    pub ready: Condvar,
     pub run_lock: Mutex<()>,
+    /// Serializes writes of `config.toml` with the in-memory config they install.
+    pub save_lock: Mutex<()>,
     pub providers: Vec<ProviderHandle>,
     pub sources: Mutex<Vec<Box<dyn SignalSource>>>,
     pub signals_started: AtomicBool,
@@ -155,6 +173,7 @@ impl Core {
             permissions,
             signal_sources,
             needs_onboarding: state.needs_onboarding,
+            config_problem: state.config_problem.as_ref().map(|p| p.key().to_owned()),
         }
     }
 
@@ -197,9 +216,37 @@ impl Core {
         self.sink.status_changed(&status);
     }
 
+    /// Keeps the last answer while a permission prompt is open: the request holds the broker
+    /// until the user answers, and neither the fusion thread nor the window may wait for that.
     pub fn refresh_permissions(&self) {
-        let fresh = lock(&self.broker).status();
+        let broker = match self.broker.try_lock() {
+            Ok(broker) => broker,
+            Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
+            Err(TryLockError::WouldBlock) => return,
+        };
+        let fresh = broker.status();
+        drop(broker);
         *lock(&self.permissions) = fresh;
+    }
+
+    /// Waits until every provider has delivered its first snapshot, or `max` has passed.
+    pub fn wait_ready(&self, max: Duration) -> bool {
+        let until = Instant::now() + max;
+        let mut state = lock(&self.state);
+        loop {
+            if state.reported.iter().all(|done| *done) {
+                return true;
+            }
+            let left = until.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return false;
+            }
+            state = self
+                .ready
+                .wait_timeout(state, left)
+                .unwrap_or_else(PoisonError::into_inner)
+                .0;
+        }
     }
 
     pub fn sharing(&self) -> bool {
@@ -305,6 +352,12 @@ impl Core {
             if let Some(slot) = state.capabilities.get_mut(provider) {
                 *slot = capabilities;
             }
+            if let Some(reported) = state.reported.get_mut(provider)
+                && !*reported
+            {
+                *reported = true;
+                self.ready.notify_all();
+            }
             let missing = result.as_ref().err().is_some_and(is_permission_missing);
             if let Some(flag) = state.permission_missing.get_mut(provider) {
                 notify = missing && !*flag;
@@ -349,9 +402,7 @@ impl Core {
             let out = state
                 .fusion
                 .on_signal(signal, ignored_by, now, &config, paused);
-            if !state.guard_active(now) {
-                state.acted.clear();
-            }
+            state.forget_guard_episode(now);
             out
         };
         tracing::debug!(kind = ?signal.kind, fired = out.fire.len(), "signal");
@@ -415,7 +466,8 @@ impl Core {
     }
 
     /// Share detection reaches the app before the run starts, so it can hide its own windows.
-    fn apply(&self, out: Outcome) {
+    fn apply(&self, mut out: Outcome) {
+        self.sweep_new_guards(&mut out);
         if out.share_started {
             self.sink.notify(&Notice::ShareDetected);
         }
@@ -428,6 +480,28 @@ impl Core {
             };
             self.run(RunRequest::new(fired, kind));
         }
+    }
+
+    /// A guard that comes on without its trigger firing still sweeps what is already open:
+    /// a share that restarts within the debounce, a pause that ends mid-share, a rule that
+    /// newly arms a connected display.
+    fn sweep_new_guards(&self, out: &mut Outcome) {
+        let now = self.now();
+        let mut state = lock(&self.state);
+        let current = if state.paused(now) {
+            Vec::new()
+        } else {
+            state.fusion.guard_triggers(&state.config)
+        };
+        let names: BTreeSet<&'static str> = current.iter().map(trigger_name).collect();
+        for fired in current {
+            let name = trigger_name(&fired);
+            let firing = out.fire.iter().any(|other| trigger_name(other) == name);
+            if !firing && !state.guarding.contains(name) {
+                out.fire.push(fired);
+            }
+        }
+        state.guarding = names;
     }
 
     pub fn tick(&self) {
@@ -461,11 +535,17 @@ impl Core {
                 state.last_idle_poll_ms = Some(now.mono_ms);
             }
             state.journal.prune(now.unix_ms);
-            if !state.guard_active(now) {
-                state.acted.clear();
-            }
-            let State { acted, index, .. } = &mut *state;
+            let restore_ms = config.restore_window.as_millis();
+            forget_details(&mut state.activity, now.unix_ms, restore_ms);
+            state.forget_guard_episode(now);
+            let State {
+                acted,
+                left_open,
+                index,
+                ..
+            } = &mut *state;
             acted.retain(|id, _| index.contains(*id));
+            left_open.retain(|id| index.contains(*id));
             (out, due, refresh, poll_idle)
         };
         if refresh {

@@ -1,10 +1,13 @@
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use closecall_core::config::{Config, ConfigError};
 
 const FILE: &str = "config.toml";
+/// Where a rejected `config.toml` goes before the first save replaces it.
+pub(crate) const REJECTED: &str = "config.rejected.toml";
 
 /// Why the config on disk is not in use. The file itself is never touched until the user saves.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13,6 +16,17 @@ pub(crate) enum Problem {
     Unparsable,
     TooNew(u32),
     Invalid(usize),
+}
+
+impl Problem {
+    pub fn key(&self) -> &'static str {
+        match self {
+            Self::Unreadable => "config.problem.unreadable",
+            Self::Unparsable => "config.problem.unparsable",
+            Self::TooNew(_) => "config.problem.too_new",
+            Self::Invalid(_) => "config.problem.invalid",
+        }
+    }
 }
 
 pub(crate) enum Loaded {
@@ -42,14 +56,28 @@ pub(crate) fn load(dir: &Path) -> Loaded {
 /// Write to a temporary file next to the target, then rename over it, so a crash never
 /// leaves half a config behind. The file may name the user's bank, so only they can read it.
 pub(crate) fn save(dir: &Path, config: &Config) -> io::Result<()> {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
     fs::create_dir_all(dir)?;
-    let temp = dir.join(format!(".{FILE}.{}.tmp", std::process::id()));
+    let temp = dir.join(format!(
+        ".{FILE}.{}.{}.tmp",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
     let written = write_private(&temp, config.to_toml().as_bytes())
         .and_then(|()| fs::rename(&temp, path(dir)));
     if written.is_err() {
         let _ = fs::remove_file(&temp);
     }
     written
+}
+
+/// Keeps the user's own file, which the engine could not use, next to the one about to replace it.
+pub(crate) fn keep_rejected(dir: &Path) -> io::Result<()> {
+    match fs::read(path(dir)) {
+        Ok(bytes) => write_private(&dir.join(REJECTED), &bytes),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 fn write_private(path: &Path, bytes: &[u8]) -> io::Result<()> {

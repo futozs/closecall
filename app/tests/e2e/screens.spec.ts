@@ -125,6 +125,24 @@ for (const { lang, locale, ui } of LANGUAGES) {
       await shot(page, info, "activity", lang);
       await page.getByRole("button", { name: ui.activity.restore }).click();
       await expect(page.getByText(ui.activity.restored, { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: ui.activity.restore })).toHaveCount(0);
+      const restoreRow = page.getByRole("article").first();
+      await expect(
+        restoreRow.getByRole("heading", {
+          name: new RegExp(`^${fill(ui.activity.restore_of, "", "trigger")}`),
+        }),
+      ).toBeVisible();
+      await expect(restoreRow.getByText(ui.restore_past.hide).first()).toBeVisible();
+      expect(errors).toEqual([]);
+    });
+
+    test("status when config.toml was rejected", async ({ page }) => {
+      const errors = await open(page, "/?state=config_problem");
+      const banner = page.getByRole("alert").filter({ hasText: ui.config.problem.title });
+      await expect(banner).toBeVisible();
+      await expect(banner.getByText(ui.config.problem.unparsable)).toBeVisible();
+      await page.goto("/?state=config_problem#rules");
+      await expect(page.getByText(ui.config.problem.kept)).toBeVisible();
       expect(errors).toEqual([]);
     });
 

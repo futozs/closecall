@@ -6,7 +6,11 @@ import type { StepOutcome } from "./StepOutcome";
 import type { TargetId } from "./TargetId";
 import type { TargetSummary } from "./TargetSummary";
 
-export type StepReport = { target: TargetId, summary: TargetSummary, action: Action, phase: Phase, because: Array<Reason>, 
+export type StepReport = { target: TargetId, summary: TargetSummary, action: Action, phase: Phase, 
+/**
+ * Empty once the run's restore window has ended: evidence can name the site that matched.
+ */
+because: Array<Reason>, 
 /**
  * `None` in a dry run.
  */

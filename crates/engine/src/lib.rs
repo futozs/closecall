@@ -10,7 +10,7 @@ mod store;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -40,6 +40,10 @@ pub struct EngineSettings {
     /// Our own bundle id / exe, never acted on.
     pub own_app_id: String,
 }
+
+/// How long a panic right after start-up waits for the first inventory: without it a
+/// `closecall panic` on a cold start would plan against nothing.
+const PANIC_READY_WAIT: Duration = Duration::from_secs(3);
 
 /// Defaults are what the app runs with; tests swap in a [`ManualClock`] and short deadlines.
 pub struct EngineOptions {
@@ -136,7 +140,8 @@ impl Engine {
     }
 
     /// A missing config means the recommended preset and onboarding; an invalid one is left on
-    /// disk untouched and reported by `diag` while the recommended preset runs.
+    /// disk untouched and reported in `Status.config_problem` and by `diag` while the
+    /// recommended preset runs. The first save keeps it as `config.rejected.toml`.
     pub fn with_options(
         platform: Box<dyn Platform>,
         settings: EngineSettings,
@@ -181,8 +186,13 @@ impl Engine {
                 last_refresh_ms: now_ms,
                 last_idle_poll_ms: None,
                 acted: std::collections::HashMap::new(),
+                left_open: std::collections::HashSet::new(),
+                guarding: std::collections::BTreeSet::new(),
+                reported: vec![false; provider_count],
             }),
+            ready: Condvar::new(),
             run_lock: Mutex::new(()),
+            save_lock: Mutex::new(()),
             providers,
             sources: Mutex::new(platform.signal_sources()),
             signals_started: AtomicBool::new(false),
@@ -249,9 +259,14 @@ impl Engine {
             return Ok(issues);
         }
         let core = self.core();
-        store::save(&core.settings.config_dir, &config)?;
         let lists = Lists::bundled().with_user_categories(&config.categories);
         {
+            let _serial = lock(&core.save_lock);
+            let rejected = lock(&core.state).config_problem.is_some();
+            if rejected {
+                store::keep_rejected(&core.settings.config_dir)?;
+            }
+            store::save(&core.settings.config_dir, &config)?;
             let mut state = lock(&core.state);
             state.config = Arc::new(config);
             state.lists = Arc::new(lists);
@@ -284,10 +299,18 @@ impl Engine {
             .0
     }
 
+    /// Right after start-up this first waits (briefly) for the providers' first inventory.
     pub fn panic(&self) -> RunReport {
-        self.core()
-            .run(RunRequest::new(FiredTrigger::Panic, RunKind::Panic))
+        let core = self.core();
+        core.wait_ready(PANIC_READY_WAIT);
+        core.run(RunRequest::new(FiredTrigger::Panic, RunKind::Panic))
             .0
+    }
+
+    /// Waits until every provider has delivered its first inventory, at most `max`. `false`
+    /// when one has not by then.
+    pub fn wait_ready(&self, max: Duration) -> bool {
+        self.core().wait_ready(max)
     }
 
     pub fn simulate(&self, trigger: FiredTrigger) -> RunReport {
@@ -321,10 +344,11 @@ impl Engine {
     }
 
     /// Never prompts while a share or projector is active: the prompt would be on screen.
+    /// The request may block until the user answers; the engine keeps running meanwhile.
     pub fn request_permission(&self, permission: &Permission) -> RequestOutcome {
         let core = self.core();
         if core.sharing() {
-            return RequestOutcome::NotApplicable;
+            return RequestOutcome::NotWhileSharing;
         }
         let outcome = lock(&core.broker).request(permission);
         core.refresh_permissions();
@@ -370,9 +394,11 @@ impl Engine {
         core.status()
     }
 
+    /// A share that is already on gets its sweep once the fusion thread sees the pause gone.
     pub fn resume(&self) -> Status {
         let core = self.core();
         lock(&core.state).paused_until_ms = None;
+        let _ = core.tx.send(Msg::Tick(None));
         core.publish_status();
         core.status()
     }

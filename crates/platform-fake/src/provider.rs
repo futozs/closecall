@@ -95,6 +95,7 @@ impl Provider for FakeProvider {
             outcome: outcome.clone(),
             untitled_save_dir: ctx.untitled_save_dir.clone(),
             planned: ctx.planned.iter().map(key_of).collect(),
+            protected: ctx.protected.iter().map(key_of).collect(),
         });
         outcome
     }

@@ -25,6 +25,8 @@ export function PermissionRow({ state }: { state: PermissionState }) {
   const [asking, setAsking] = useState(false);
   // macOS asks for Automation only while the app runs; the engine asks again when it starts.
   const [waitingForApp, setWaitingForApp] = useState(false);
+  const [refused, setRefused] = useState(false);
+  const shared = status.share.active || status.share.mirrored_display || status.share.external_display;
   const { permission } = state;
   const app = permission.kind === "automation" ? permission.app_name : "";
   const label = permission.kind === "automation" ? app : t(`permission.${permission.kind}`);
@@ -34,6 +36,7 @@ export function PermissionRow({ state }: { state: PermissionState }) {
     try {
       const outcome = await ipc.requestPermission(permission);
       setWaitingForApp(outcome.kind === "app_not_running");
+      setRefused(outcome.kind === "not_while_sharing");
       setStatus(await ipc.getStatus());
     } finally {
       setAsking(false);
@@ -44,15 +47,21 @@ export function PermissionRow({ state }: { state: PermissionState }) {
       state={PERMISSION_MARK[state.status]}
       label={label}
       value={t(`permission.status.${state.status}`, { app })}
-      detail={waitingForApp ? t("permission.asks_when_open") : undefined}
+      detail={
+        waitingForApp
+          ? t("permission.asks_when_open")
+          : refused && shared
+            ? t("permission.not_while_sharing")
+            : undefined
+      }
       action={
         canAsk && (
           <Button
             size="sm"
             variant={state.status === "denied" ? "secondary" : "primary"}
             onClick={ask}
-            disabled={asking || status.share.active}
-            title={status.share.active ? t("permission.not_while_sharing") : undefined}
+            disabled={asking || shared}
+            title={shared ? t("permission.not_while_sharing") : undefined}
           >
             {state.status === "denied" ? t("permission.open_settings") : t("permission.allow")}
           </Button>

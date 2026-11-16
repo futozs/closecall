@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Evidence } from "../../src/bindings/Evidence";
-import { describeEvidence, issueMessage, keyedMessage, ruleName } from "../../src/evidence";
+import { describeEvidence, failureMessage, issueMessage, keyedMessage, ruleName } from "../../src/evidence";
 import { i18next, initI18n } from "../../src/i18n";
 
 const banking: Evidence = { kind: "category", id: "banking", via: { kind: "domain", domain: "otpbank.hu" } };
@@ -63,5 +63,22 @@ describe("engine message keys", () => {
       ruleName(i18next.t, { id: "private-windows-on-share", name: "preset.private-windows-on-share" }),
     ).toBe("Privát és inkognitó lapok bezárása megosztáskor");
     expect(ruleName(i18next.t, { id: "gone", name: "preset.gone" })).toBe("gone");
+  });
+});
+
+describe("failureMessage", () => {
+  test("renders a failed step's message key like any other reason", async () => {
+    await i18next.changeLanguage("en");
+    expect(failureMessage(i18next.t, "reason.timeout")).toBe("The app didn't respond in time.");
+    expect(failureMessage(i18next.t, "reason.macos.health.no_input_device")).toBe(
+      "No microphone is connected.",
+    );
+    await i18next.changeLanguage("hu");
+    expect(failureMessage(i18next.t, "reason.timeout")).toBe("Az alkalmazás nem válaszolt időben.");
+  });
+
+  test("shows anything that is not a key as it came", async () => {
+    await i18next.changeLanguage("en");
+    expect(failureMessage(i18next.t, "could not conceal the window")).toBe("could not conceal the window");
   });
 });

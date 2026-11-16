@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use closecall_core::config::Config;
 use closecall_core::platform::{Permission, RequestOutcome, SignalKind};
 use closecall_core::{
     Action, Confidence, FiredTrigger, Matcher, StepOutcome, TargetKindTag, Trigger,
@@ -192,7 +193,7 @@ fn never_prompts_for_a_permission_while_sharing() {
     h.share(Confidence::High, None);
     assert_eq!(
         h.engine.request_permission(&Permission::Accessibility),
-        RequestOutcome::NotApplicable
+        RequestOutcome::NotWhileSharing
     );
     assert!(h.fake.permission_requests().is_empty());
 
@@ -203,4 +204,148 @@ fn never_prompts_for_a_permission_while_sharing() {
         RequestOutcome::Granted
     );
     assert_eq!(h.fake.permission_requests().len(), 1);
+}
+
+#[test]
+fn a_batch_close_is_only_told_about_targets_closed_the_same_way() {
+    let share = || vec![Trigger::ScreenShare];
+    let h = Harness::with_config(&Config {
+        rules: vec![
+            rule(
+                "webmail-notify",
+                share(),
+                vec![TargetKindTag::Tab],
+                category("webmail"),
+                Action::NotifyOnly,
+            ),
+            rule(
+                "banking-close",
+                share(),
+                vec![TargetKindTag::Tab],
+                category("banking"),
+                Action::Close,
+            ),
+            rule(
+                "adult-hide",
+                share(),
+                vec![TargetKindTag::Tab],
+                category("adult"),
+                Action::Hide,
+            ),
+        ],
+        ..Config::default()
+    });
+    h.share(Confidence::High, None);
+
+    assert!(h.closed("chrome-otp"));
+    assert!(
+        !h.touched("chrome-gmail"),
+        "notify-only never reaches the provider"
+    );
+    let executed = h.fake.executed();
+    let step = |key: &str| {
+        executed
+            .iter()
+            .find(|step| step.key == key)
+            .unwrap_or_else(|| panic!("{key} was not executed"))
+    };
+    assert_eq!(step("chrome-otp").planned, ["chrome-otp"]);
+    assert_eq!(step("chrome-adult").planned, ["chrome-adult"]);
+    assert!(
+        step("chrome-otp")
+            .protected
+            .contains(&"chrome-meet".to_owned()),
+        "the provider learns which of its targets must stay visible"
+    );
+}
+
+#[test]
+fn a_share_that_restarts_inside_the_debounce_still_sweeps() {
+    let h = Harness::demo();
+    h.share(Confidence::High, None);
+    h.signal(SignalKind::CaptureStopped);
+    h.advance(Duration::from_secs(4));
+    assert!(!h.engine.status().share.active);
+
+    h.fake.add(chrome_tab(
+        "chrome-bank-2",
+        "https://netbank.otpbank.hu/portal/hu/Kartyak",
+        "OTP Bank – Kártyák",
+    ));
+    h.engine.settle();
+    assert!(!h.touched("chrome-bank-2"));
+
+    h.share(Confidence::High, None);
+    assert!(
+        h.closed("chrome-bank-2"),
+        "the second share is inside the 10 s debounce but still sweeps"
+    );
+    assert!(h.engine.status().guard_active);
+}
+
+#[test]
+fn a_pause_that_ends_mid_share_sweeps_what_is_open() {
+    let h = Harness::demo();
+    h.engine.pause(15);
+    h.share(Confidence::High, None);
+    assert!(!h.touched("chrome-otp"));
+    assert!(!h.engine.status().guard_active);
+
+    h.advance(Duration::from_secs(15 * 60 + 1));
+    assert!(h.closed("chrome-otp"));
+    assert!(h.engine.status().guard_active);
+}
+
+#[test]
+fn resuming_mid_share_sweeps_what_is_open() {
+    let h = Harness::demo();
+    h.engine.pause(60);
+    h.share(Confidence::High, None);
+    assert!(!h.touched("chrome-otp"));
+
+    h.engine.resume();
+    h.engine.settle();
+    assert!(h.closed("chrome-otp"));
+}
+
+#[test]
+fn a_tab_left_open_is_reported_once_per_share() {
+    let h = Harness::with_config(&Config {
+        rules: vec![rule(
+            "webmail-notify",
+            vec![Trigger::ScreenShare],
+            vec![TargetKindTag::Tab],
+            category("webmail"),
+            Action::NotifyOnly,
+        )],
+        ..Config::default()
+    });
+    h.share(Confidence::High, None);
+    let left_open = Notice::RunSummary {
+        done: 0,
+        hidden: 0,
+        skipped: 1,
+    };
+    assert_eq!(h.sink.notices(), [Notice::ShareDetected, left_open.clone()]);
+
+    for unread in 4..7 {
+        assert!(h.fake.navigate(
+            "chrome-gmail",
+            "https://mail.google.com/mail/u/0/#inbox",
+            &format!("Beérkező levelek ({unread}) – Gmail"),
+        ));
+        h.engine.settle();
+    }
+    assert_eq!(
+        h.sink
+            .runs_for(|t| matches!(t, FiredTrigger::ScreenShare { .. }))
+            .len(),
+        4,
+        "each change is still re-planned"
+    );
+    assert_eq!(
+        h.sink.notices(),
+        [Notice::ShareDetected, left_open],
+        "but not announced again on the shared screen"
+    );
 }

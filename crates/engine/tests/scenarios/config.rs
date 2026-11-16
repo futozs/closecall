@@ -69,6 +69,66 @@ fn an_invalid_file_runs_the_recommended_preset_and_is_never_overwritten() {
 }
 
 #[test]
+fn a_rejected_file_is_reported_and_kept_aside_on_the_first_save() {
+    let text = "version = 1\n[[rule]]\nid = \"broken\"\n";
+    let h = Harness::start(Setup {
+        config_file: Some(text.to_owned()),
+        ..Setup::default()
+    });
+    assert_eq!(
+        h.engine.status().config_problem.as_deref(),
+        Some("config.problem.unparsable")
+    );
+
+    assert_eq!(
+        h.engine.save_config(Config::recommended()).expect("saved"),
+        vec![]
+    );
+    assert_eq!(h.engine.status().config_problem, None);
+    let kept = std::fs::read_to_string(h.dir.path().join("config.rejected.toml"));
+    assert_eq!(kept.ok().as_deref(), Some(text));
+    assert_eq!(
+        h.config_on_disk().as_deref(),
+        Some(Config::recommended().to_toml().as_str())
+    );
+
+    let mut next = Config::recommended();
+    next.share_min_confidence = Confidence::High;
+    assert_eq!(h.engine.save_config(next).expect("saved"), vec![]);
+    let kept = std::fs::read_to_string(h.dir.path().join("config.rejected.toml"));
+    assert_eq!(
+        kept.ok().as_deref(),
+        Some(text),
+        "only the rejected file is kept, not later saves"
+    );
+}
+
+#[test]
+fn concurrent_saves_leave_one_whole_file() {
+    let h = Harness::demo();
+    let configs: Vec<Config> = [Confidence::Low, Confidence::Medium, Confidence::High]
+        .into_iter()
+        .map(|confidence| {
+            let mut config = Config::recommended();
+            config.share_min_confidence = confidence;
+            config
+        })
+        .collect();
+    std::thread::scope(|scope| {
+        for config in &configs {
+            let engine = h.engine.clone();
+            scope.spawn(move || {
+                for _ in 0..10 {
+                    assert_eq!(engine.save_config(config.clone()).expect("saved"), vec![]);
+                }
+            });
+        }
+    });
+    let on_disk = Config::from_toml(&h.config_on_disk().expect("written")).expect("whole file");
+    assert_eq!(on_disk, h.engine.config(), "memory and disk agree");
+}
+
+#[test]
 fn reset_returns_a_preset_without_saving() {
     let h = Harness::demo();
     assert_eq!(

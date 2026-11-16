@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use closecall_core::config::Config;
 use closecall_core::ipc::{RunReport, RunSummary, StepReport, TargetSummary};
-use closecall_core::plan::{PlanContext, plan};
+use closecall_core::plan::{PlanContext, plan, protected};
 use closecall_core::platform::{ExecContext, Reverify};
 use closecall_core::{
     Action, AppSelector, Capability, Confirm, Dirty, Dur, FiredTrigger, Phase, Reason, Step,
@@ -24,6 +24,8 @@ pub(crate) const REASON_GONE: &str = "reason.gone";
 pub(crate) const REASON_CHANGED: &str = "reason.changed_before_action";
 pub(crate) const REASON_TIMEOUT: &str = "reason.timeout";
 pub(crate) const REASON_PRIVATE: &str = "reason.private_not_restorable";
+/// Reopening a document waits for Launch Services and the app, which can take seconds.
+const DOCUMENT_RESTORE_DEADLINE: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RunKind {
@@ -126,16 +128,19 @@ struct RunData {
 }
 
 impl RunData {
-    fn plan(&self, fired: &FiredTrigger, targets: &[Target], home: &str) -> Vec<Step> {
-        let ctx = PlanContext {
+    fn context<'a>(&'a self, home: &'a str) -> PlanContext<'a> {
+        PlanContext {
             categories: &*self.lists,
             protect: &self.config.protect,
             protect_apps: &self.protect_apps,
             capabilities: &self.capabilities,
             now_ms: self.now_ms,
             home,
-        };
-        plan(fired, targets, &self.config.rules, &ctx).steps
+        }
+    }
+
+    fn plan(&self, fired: &FiredTrigger, targets: &[Target], home: &str) -> Vec<Step> {
+        plan(fired, targets, &self.config.rules, &self.context(home)).steps
     }
 }
 
@@ -179,6 +184,18 @@ impl Core {
             snapshot.iter().map(|(p, t)| (t.id, *p)).collect();
         let steps = data.plan(&request.fired, &targets, &self.home);
         let covered: BTreeSet<TargetId> = steps.iter().map(|step| step.target).collect();
+        let kept_visible: Vec<Target> = if steps.is_empty() {
+            Vec::new()
+        } else {
+            let ids: BTreeSet<TargetId> = protected(&targets, &data.context(&self.home))
+                .into_iter()
+                .collect();
+            targets
+                .iter()
+                .filter(|target| ids.contains(&target.id))
+                .cloned()
+                .collect()
+        };
 
         let mut report = RunReport {
             run_id: 0,
@@ -187,6 +204,7 @@ impl Core {
             dry_run: request.kind == RunKind::Preview,
             steps: Vec::new(),
             restorable: false,
+            restore_of: None,
         };
         let by_id: BTreeMap<TargetId, &Target> = targets.iter().map(|t| (t.id, t)).collect();
         let planned: Vec<Planned> = steps
@@ -210,7 +228,7 @@ impl Core {
         }
 
         let planned = self.split_countdowns(&request, planned, now.mono_ms);
-        let executed = self.execute(&request.fired, &data, &planned);
+        let executed = self.execute(&request.fired, &data, &planned, &kept_visible);
         report.steps = planned
             .iter()
             .zip(&executed)
@@ -227,12 +245,24 @@ impl Core {
         let restore_ms = data.config.restore_window.as_millis();
         // An automatic run that found nothing to do leaves no trace, not even a run id.
         let kept = !report.steps.is_empty() || request.kind != RunKind::Automatic;
+        let repeated: Vec<bool>;
         {
             let mut state = lock(&self.state);
             if kept {
                 report.run_id = state.next_run_id();
             }
             let run_id = report.run_id;
+            // While the guard is on, a target left open is reported once, not again on every
+            // title change that re-plans it.
+            let guard_on = state.guard_active(now);
+            repeated = executed
+                .iter()
+                .map(|done| {
+                    guard_on
+                        && left_open(done.action, &done.outcome)
+                        && !state.left_open.insert(done.target.id)
+                })
+                .collect();
             for (p, done) in planned.iter().zip(&executed) {
                 match &done.update {
                     Some(IndexUpdate::Remove(id)) => state.index.remove(*id),
@@ -280,7 +310,7 @@ impl Core {
         if !report.steps.is_empty() {
             self.sink.run_completed(&report);
             if matches!(request.kind, RunKind::Automatic | RunKind::Panic) {
-                self.notify_run(&report, &executed);
+                self.notify_run(&report, &executed, &repeated);
             }
         }
         self.publish_status();
@@ -332,7 +362,13 @@ impl Core {
 
     /// Phases run in order. Within a phase each provider works through its own steps on a
     /// thread of its own, so one slow app does not hold up the others.
-    fn execute(&self, fired: &FiredTrigger, data: &RunData, planned: &[Planned]) -> Vec<Executed> {
+    fn execute(
+        &self,
+        fired: &FiredTrigger,
+        data: &RunData,
+        planned: &[Planned],
+        protected: &[Target],
+    ) -> Vec<Executed> {
         let mut results: Vec<Option<Executed>> = planned.iter().map(|_| None).collect();
         let mut start = 0;
         while start < planned.len() {
@@ -352,7 +388,16 @@ impl Core {
                         scope.spawn(move || {
                             indices
                                 .iter()
-                                .map(|&i| (i, self.act(fired, data, planned, *provider, i)))
+                                .map(|&i| {
+                                    let job = Job {
+                                        fired,
+                                        data,
+                                        planned,
+                                        protected,
+                                        provider: *provider,
+                                    };
+                                    (i, self.act(&job, i))
+                                })
                                 .collect::<Vec<_>>()
                         })
                     })
@@ -381,14 +426,14 @@ impl Core {
             .collect()
     }
 
-    fn act(
-        &self,
-        fired: &FiredTrigger,
-        data: &RunData,
-        planned: &[Planned],
-        provider: usize,
-        i: usize,
-    ) -> Executed {
+    fn act(&self, job: &Job<'_>, i: usize) -> Executed {
+        let Job {
+            fired,
+            data,
+            planned,
+            protected,
+            provider,
+        } = *job;
         let p = &planned[i];
         let mut done = Executed {
             target: p.target.clone(),
@@ -449,11 +494,18 @@ impl Core {
         }
         let ctx = ExecContext {
             untitled_save_dir: data.untitled_save_dir.clone(),
-            planned: planned
-                .iter()
-                .filter(|other| other.provider == provider)
-                .map(|other| other.target.clone())
+            planned: std::iter::once(done.target.clone())
+                .chain(
+                    planned
+                        .iter()
+                        .enumerate()
+                        .filter(|&(j, other)| {
+                            j != i && other.provider == provider && other.step.action == step.action
+                        })
+                        .map(|(_, other)| other.target.clone()),
+                )
                 .collect(),
+            protected: protected.to_vec(),
         };
         let target = done.target.clone();
         let deadline = Instant::now() + budget;
@@ -480,12 +532,16 @@ impl Core {
         }
     }
 
-    fn notify_run(&self, report: &RunReport, executed: &[Executed]) {
+    /// `repeated` marks targets already reported as left open while this guard is on.
+    fn notify_run(&self, report: &RunReport, executed: &[Executed], repeated: &[bool]) {
         let mut done = 0;
         let mut hidden = 0;
         let mut skipped = 0;
         let mut unsaved = 0;
-        for (step, result) in report.steps.iter().zip(executed) {
+        for ((step, result), repeated) in report.steps.iter().zip(executed).zip(repeated) {
+            if *repeated {
+                continue;
+            }
             match &result.outcome {
                 StepOutcome::Done => match step.action {
                     Action::Close | Action::Quit => done += 1,
@@ -558,6 +614,7 @@ impl Core {
             dry_run: false,
             steps,
             restorable: false,
+            restore_of: Some(run_id),
         };
         {
             let mut state = lock(&self.state);
@@ -575,7 +632,13 @@ impl Core {
         let Some(handle) = self.providers.get(entry.provider) else {
             return skipped(REASON_GONE);
         };
-        let deadline = Instant::now() + self.options.document_deadline;
+        let budget = match (&entry.target.kind, entry.action) {
+            (TargetKind::DocumentWindow(_), Action::Close | Action::Quit) => {
+                DOCUMENT_RESTORE_DEADLINE
+            }
+            _ => self.options.document_deadline,
+        };
+        let deadline = Instant::now() + budget;
         handle
             .request(
                 |reply| Command::Restore {
@@ -587,6 +650,42 @@ impl Core {
                 deadline + self.options.reply_grace,
             )
             .unwrap_or_else(|| failed(REASON_TIMEOUT))
+    }
+}
+
+struct Job<'a> {
+    fired: &'a FiredTrigger,
+    data: &'a RunData,
+    planned: &'a [Planned],
+    protected: &'a [Target],
+    provider: usize,
+}
+
+fn left_open(action: Action, outcome: &StepOutcome) -> bool {
+    match outcome {
+        StepOutcome::Done => action == Action::NotifyOnly,
+        StepOutcome::Skipped { reason_key } => reason_key != REASON_GONE,
+        StepOutcome::FellBack { .. } | StepOutcome::Failed { .. } => false,
+    }
+}
+
+/// Once a run can no longer be restored, its history keeps what happened but not to what:
+/// titles, URLs and paths go, and so does the evidence, which can name the site that matched.
+pub(crate) fn forget_details(
+    activity: &mut std::collections::VecDeque<RunReport>,
+    now_unix_ms: u64,
+    restore_ms: u64,
+) {
+    for report in activity
+        .iter_mut()
+        .filter(|report| report.at_ms.saturating_add(restore_ms) <= now_unix_ms)
+    {
+        for step in &mut report.steps {
+            step.summary.title.clear();
+            step.summary.url = None;
+            step.summary.path = None;
+            step.because.clear();
+        }
     }
 }
 

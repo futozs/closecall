@@ -10,9 +10,9 @@
 //! | `run_panic`          | –                             | `RunReport`                     |
 //! | `simulate`           | `{ trigger: FiredTrigger }`   | `RunReport` (really acts)       |
 //! | `get_activity`       | –                             | `Vec<RunReport>` (newest first, memory only) |
-//! | `restore`            | `{ run_id: u64 }`             | `RunReport`                     |
+//! | `restore`            | `{ run_id: u64 }`             | `RunReport` (a new run, `restore_of = run_id`) |
 //! | `get_permissions`    | –                             | `Vec<PermissionState>`          |
-//! | `request_permission` | `{ permission: Permission }`  | `RequestOutcome`                |
+//! | `request_permission` | `{ permission: Permission }`  | `RequestOutcome` (`not_while_sharing` during a share) |
 //! | `get_capabilities`   | –                             | `CapabilityReport`              |
 //! | `list_categories`    | –                             | `Vec<CategoryInfo>`             |
 //! | `list_displays`      | –                             | `Vec<DisplayInfo>`              |
@@ -55,6 +55,9 @@ pub struct Status {
     pub permissions: Vec<PermissionState>,
     pub signal_sources: Vec<SignalSourceStatus>,
     pub needs_onboarding: bool,
+    /// Message key (`config.problem.*`) when `config.toml` was rejected and the recommended
+    /// preset runs instead. The file is left as it is until the user saves.
+    pub config_problem: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -103,6 +106,9 @@ pub struct RunReport {
     pub dry_run: bool,
     pub steps: Vec<StepReport>,
     pub restorable: bool,
+    /// Set on the report of a restore: the run it undid. Its steps carry the original actions.
+    #[ts(type = "number | null")]
+    pub restore_of: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -112,13 +118,14 @@ pub struct StepReport {
     pub summary: TargetSummary,
     pub action: Action,
     pub phase: Phase,
+    /// Empty once the run's restore window has ended: evidence can name the site that matched.
     pub because: Vec<Reason>,
     /// `None` in a dry run.
     pub outcome: Option<StepOutcome>,
 }
 
 /// Enough to recognise a target in the UI. Shown only inside our own window, never in
-/// notifications or logs.
+/// notifications or logs. Title, URL and path are cleared once the run's restore window ends.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct TargetSummary {

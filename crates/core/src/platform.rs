@@ -54,9 +54,16 @@ pub enum ProviderError {
 pub struct ExecContext {
     /// Already expanded; may not exist yet.
     pub untitled_save_dir: PathBuf,
-    /// Every target this provider acts on in the current run, so it can hide a whole app
-    /// instead of minimizing its windows one by one, or close tabs in one call per window.
+    /// This provider's targets in the current run whose step has the same action as the
+    /// current one, the current target included, so the provider can hide a whole app instead
+    /// of minimizing its windows one by one, or close tabs in one call per window. A target
+    /// whose step is another action (a notify-only tab, a document that is only hidden) is never
+    /// in it, so batching on this list never does more than each target's own step asked for.
     pub planned: Vec<Target>,
+    /// The run's protected targets, from every provider (meeting tabs, the capturing app's
+    /// windows). Hiding a whole app would conceal them too, so a provider never does that while
+    /// one of them belongs to the same app instance.
+    pub protected: Vec<Target>,
 }
 
 pub trait Provider: Send {
@@ -177,6 +184,8 @@ pub enum RequestOutcome {
     /// macOS can only ask for Automation consent while the target app runs.
     AppNotRunning,
     NotApplicable,
+    /// A share or projector is active, so no prompt was shown: it would be on the shared screen.
+    NotWhileSharing,
 }
 
 pub trait PermissionBroker: Send {

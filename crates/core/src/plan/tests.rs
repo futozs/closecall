@@ -375,6 +375,14 @@ fn protection_always_wins() {
         targets_of(&f.plan(&FiredTrigger::Panic, &snapshot, &[everything])),
         [7, 8]
     );
+    f.protect.categories = vec![CategoryId("meeting".to_owned())];
+    assert_eq!(
+        protected(&snapshot, &f.ctx())
+            .into_iter()
+            .map(|id| id.0)
+            .collect::<Vec<_>>(),
+        [1, 2, 3, 4, 5, 6]
+    );
 }
 
 #[test]

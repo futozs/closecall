@@ -81,6 +81,28 @@ pub fn plan(
     Plan { steps }
 }
 
+/// The targets no plan may touch, so an executor can avoid concealing them as a side effect.
+pub fn protected(snapshot: &[Target], ctx: &PlanContext<'_>) -> Vec<crate::TargetId> {
+    let match_ctx = MatchContext {
+        categories: ctx.categories,
+        home: ctx.home,
+    };
+    let protected = protection_matcher(ctx);
+    snapshot
+        .iter()
+        .filter(|target| {
+            is_protected(
+                target,
+                &protected,
+                ctx.protect,
+                ctx.protect_apps,
+                &match_ctx,
+            )
+        })
+        .map(|target| target.id)
+        .collect()
+}
+
 fn select(rule: &Rule, target: &Target, ctx: &MatchContext<'_>) -> Option<Evidence> {
     if !rule.targets.contains(&target.kind.tag()) {
         return None;

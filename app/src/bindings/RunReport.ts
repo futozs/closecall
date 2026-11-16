@@ -2,4 +2,8 @@
 import type { FiredTrigger } from "./FiredTrigger";
 import type { StepReport } from "./StepReport";
 
-export type RunReport = { run_id: number, at_ms: number, trigger: FiredTrigger, dry_run: boolean, steps: Array<StepReport>, restorable: boolean, };
+export type RunReport = { run_id: number, at_ms: number, trigger: FiredTrigger, dry_run: boolean, steps: Array<StepReport>, restorable: boolean, 
+/**
+ * Set on the report of a restore: the run it undid. Its steps carry the original actions.
+ */
+restore_of: number | null, };

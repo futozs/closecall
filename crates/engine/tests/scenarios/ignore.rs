@@ -216,7 +216,7 @@ fn a_display_that_is_not_ignored_runs_display_connected_rules_and_arms_the_guard
     assert!(status.share.external_display && status.guard_active);
     assert_eq!(
         h.engine.request_permission(&Permission::Accessibility),
-        RequestOutcome::NotApplicable,
+        RequestOutcome::NotWhileSharing,
         "a projector counts as sharing for permission prompts"
     );
 

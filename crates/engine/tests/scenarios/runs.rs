@@ -103,6 +103,8 @@ fn restore_undoes_a_run_in_reverse_order_except_private_tabs() {
 
     let restored = h.engine.restore(report.run_id).expect("restorable");
     assert!(!restored.restorable);
+    assert_eq!(restored.restore_of, Some(report.run_id));
+    assert_ne!(restored.run_id, report.run_id);
     assert_eq!(
         outcome_of(&restored, "ajándék – YouTube"),
         Some(&skipped("reason.private_not_restorable"))
@@ -150,6 +152,23 @@ fn restore_is_refused_after_the_window() {
         Err(EngineError::NotRestorable(id)) if id == report.run_id
     ));
     assert!(h.fake.restored().is_empty());
+}
+
+#[test]
+fn activity_forgets_titles_urls_and_paths_after_the_restore_window() {
+    let h = Harness::demo();
+    h.engine.panic();
+    let fresh = &h.engine.activity()[0];
+    assert!(fresh.steps.iter().any(|step| step.summary.url.is_some()));
+
+    h.advance(Duration::from_secs(2 * 3600 + 1));
+    let old = &h.engine.activity()[0];
+    assert_eq!(old.steps.len(), fresh.steps.len());
+    for step in &old.steps {
+        assert!(step.summary.title.is_empty() && step.summary.url.is_none());
+        assert!(step.summary.path.is_none() && step.because.is_empty());
+        assert!(!step.summary.app_name.is_empty());
+    }
 }
 
 #[test]

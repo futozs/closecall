@@ -229,6 +229,8 @@ export function installMock() {
     permissions: perms,
     signal_sources: sourcesFor(heldBy(config)),
     needs_onboarding: query.has("onboarding"),
+    // `?state=config_problem`: config.toml was rejected and the recommended rules run instead.
+    config_problem: state === "config_problem" ? "config.problem.unparsable" : null,
   };
   const summarize = (report: RunReport) => {
     const count = (kind: StepOutcome["kind"]) =>
@@ -269,6 +271,7 @@ export function installMock() {
       dry_run: dryRun,
       steps,
       restorable: !dryRun && steps.length > 0,
+      restore_of: null,
     };
     if (!dryRun) {
       activity = [report, ...activity];
@@ -326,9 +329,31 @@ export function installMock() {
           return structuredClone(activity);
         case "restore": {
           const report = activity.find((entry) => entry.run_id === args.run_id);
-          if (!report) throw new Error(`no run ${String(args.run_id)}`);
+          if (!report?.restorable) throw new Error(`run ${String(args.run_id)} is not restorable`);
           report.restorable = false;
-          return structuredClone(report);
+          const restored: RunReport = {
+            ...structuredClone(report),
+            run_id: nextRunId++,
+            at_ms: Date.now(),
+            restore_of: report.run_id,
+            steps: report.steps
+              .filter((step) => step.outcome?.kind === "done" || step.outcome?.kind === "fell_back")
+              .reverse()
+              .map((step) => ({
+                ...step,
+                action: step.outcome?.kind === "fell_back" ? step.outcome.action : step.action,
+                outcome:
+                  step.summary.kind === "tab" &&
+                  step.action === "close" &&
+                  (step.summary.app_name === "Safari" ||
+                    step.because.some((reason) => reason.evidence.kind === "private"))
+                    ? { kind: "skipped", reason_key: "reason.private_not_restorable" }
+                    : { kind: "done" },
+              })),
+          };
+          activity = [restored, ...activity];
+          announce(restored);
+          return structuredClone(restored);
         }
         case "get_permissions":
           return structuredClone(perms);
@@ -337,6 +362,9 @@ export function installMock() {
           const current = perms.find(
             (entry) => JSON.stringify(entry.permission) === JSON.stringify(permission),
           );
+          const { share } = status;
+          if (share.active || share.mirrored_display || share.external_display)
+            return { kind: "not_while_sharing" } satisfies RequestOutcome;
           if (current?.status === "app_not_running")
             return { kind: "app_not_running" } satisfies RequestOutcome;
           if (permission.kind === "accessibility") {

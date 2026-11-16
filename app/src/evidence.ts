@@ -51,3 +51,10 @@ export function keyedMessage(t: TFunction, key: string, namespace: "reason" | "n
   const full = key.startsWith(`${namespace}.`) ? key : `${namespace}.${key}`;
   return t(full, { defaultValue: t(`${namespace}.unknown`, { key }) });
 }
+
+const MESSAGE_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_-]+)+$/;
+
+/** A failed step's `error` is a message key like any reason; anything else is shown as it came. */
+export function failureMessage(t: TFunction, error: string): string {
+  return MESSAGE_KEY.test(error) ? keyedMessage(t, error, "reason") : error;
+}

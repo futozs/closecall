@@ -67,6 +67,20 @@ function ShareState() {
   );
 }
 
+/** The engine runs the recommended rules because config.toml was rejected. */
+function ConfigProblem() {
+  const { t } = useTranslation();
+  const { status } = useAppData();
+  if (status.config_problem === null) return null;
+  return (
+    <div role="alert" className="mb-8 rounded-ctl bg-signal-wash px-4 py-3">
+      <p className="font-semibold">{t("config.problem.title")}</p>
+      <p className="mt-1 max-w-prose text-sm">{t(status.config_problem, { defaultValue: "" })}</p>
+      <p className="mt-1 max-w-prose text-sm text-ink-2">{t("config.problem.kept")}</p>
+    </div>
+  );
+}
+
 export function App() {
   const { t } = useTranslation();
   const { status } = useAppData();
@@ -132,6 +146,7 @@ export function App() {
       </header>
       <main id="main" className="min-w-0 flex-1 px-4 pt-6 pb-16 sm:px-10 sm:pt-10">
         <div className="mx-auto max-w-[46rem]">
+          <ConfigProblem />
           <Screen />
         </div>
       </main>

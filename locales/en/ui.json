@@ -120,6 +120,13 @@
     "quit": "Quit",
     "notify_only": "Reported"
   },
+  "restore_past": {
+    "close": "Reopened",
+    "hide": "Shown again",
+    "minimize": "Window restored",
+    "quit": "Started again",
+    "notify_only": "Nothing to undo"
+  },
   "outcome": {
     "fell_back": "{{action}} instead",
     "skipped": "Skipped",
@@ -233,7 +240,7 @@
   },
   "confirm": {
     "never": "Act immediately",
-    "countdown": "Count down first, with a Keep button"
+    "countdown": "Wait first"
   },
   "matcher": {
     "kind_label": "Condition",
@@ -323,8 +330,8 @@
     "on_unsaved": "If a document has unsaved changes",
     "on_unsaved_hint": "Unknown means unsaved: Close Call never guesses with your work.",
     "confirm": "Before acting",
-    "confirm_hint": "A countdown lets you keep the item. It only works for idle and open-too-long triggers.",
-    "confirm_not_allowed": "A countdown is only possible when every trigger is idle or open-too-long. During a share or lock there is no time to ask, and a dialog would show on the shared screen.",
+    "confirm_hint": "Close Call waits this long before acting. For idle rules, any keyboard or mouse input in that time calls it off. There is no Keep button yet. It only works for idle and open-too-long triggers.",
+    "confirm_not_allowed": "Waiting first is only possible when every trigger is idle or open-too-long. During a share or lock there is no time to wait.",
     "save": "Save rule",
     "delete": "Delete rule",
     "delete_confirm": "Delete this rule? This can't be undone.",
@@ -443,7 +450,7 @@
     "share-close-invoices": "Close invoices and payslips when sharing",
     "lid-close-adult": "Close adult tabs when the lid closes",
     "away-close-banking": "Close banking tabs after 15 minutes away",
-    "bank-tab-open-too-long": "Offer to close banking tabs open for 2 hours",
+    "bank-tab-open-too-long": "Close banking tabs open for 2 hours, after a minute's wait",
     "private-windows-on-share": "Close private and incognito tabs when sharing"
   },
   "config": {
@@ -451,7 +458,7 @@
       "duplicate_rule_id": "Another rule already uses this ID.",
       "empty_when": "Pick at least one trigger.",
       "empty_targets": "Pick at least one kind of item to look at.",
-      "countdown_not_allowed": "A countdown only works when every trigger is idle or open-too-long.",
+      "countdown_not_allowed": "Waiting first only works when every trigger is idle or open-too-long.",
       "empty_composite": "This group has no conditions. Add one or remove the group.",
       "lone_not": "“Not” on its own matches almost everything. Combine it with another condition under “All of”.",
       "invalid_glob": "This pattern isn't valid. Check that every [ and { is closed.",
@@ -461,6 +468,14 @@
       "invalid_display_vendor": "Use the display's EDID vendor code, a number from 1 to 65535.",
       "unsupported_version": "This configuration was written by a newer Close Call. Update the app to edit it.",
       "unknown": "Problem with {{field}} ({{code}})."
+    },
+    "problem": {
+      "title": "Your config.toml isn't in use",
+      "unreadable": "Close Call couldn't open config.toml, so it runs the recommended rules for now.",
+      "unparsable": "config.toml has a syntax error, so Close Call runs the recommended rules for now.",
+      "too_new": "config.toml was written by a newer Close Call, so this version runs the recommended rules for now.",
+      "invalid": "Some settings in config.toml aren't valid, so Close Call runs the recommended rules for now.",
+      "kept": "Your file is untouched. Fix it and restart Close Call, or change something here: saving keeps your file as config.rejected.toml next to the new one."
     }
   },
   "reason": {
@@ -484,7 +499,34 @@
     "capture_ignored": "An app on your ignore list keeps the screen captured, so this signal can't tell a new share apart. Shares are recognised from the sharing bars of meeting apps and browsers instead.",
     "symbol_missing": "Not available on this version of the system. The hotkey, projector and lid triggers still work.",
     "x11_no_share_detection": "X11 can't tell when the screen is captured. Use the panic hotkey before sharing.",
-    "private_not_restorable": "Private tabs are never reopened, so they don't end up in your history.",
+    "private_not_restorable": "Private tabs are never reopened, so they don't end up in your history. Safari can't tell them apart, so its tabs are never reopened either.",
+    "discard_untitled_hidden": "It was never saved, and closing it without saving would delete it, so it was hidden.",
+    "autosave_discard_hidden": "This app saves on its own, so it was hidden instead of closed without saving.",
+    "save_failed_hidden": "Saving didn't finish, so it was hidden instead of closed.",
+    "sheet_unrecognized_hidden": "The app asked something other than whether to save, so Close Call backed out and hid the window.",
+    "sheet_open_hidden": "A dialog was already open in the window, so it was hidden instead of closed.",
+    "quit_with_documents_hidden": "The app has open documents, so it was hidden instead of quit.",
+    "other_windows_visible": "The app has other windows that stay open, so only this window was minimized.",
+    "protected_in_app": "Something you protect, such as your meeting, is open in the same app, so the app wasn't hidden.",
+    "close_failed": "The app didn't close it.",
+    "window_unreachable": "The app didn't answer when asked about its windows.",
+    "app_not_running": "The app isn't running any more.",
+    "handle_invalid": "Close Call couldn't find this item again.",
+    "script_failed": "The app reported an error.",
+    "hide_failed": "macOS didn't hide the app.",
+    "close_and_hide_failed": "It couldn't be closed, and hiding the app didn't work either.",
+    "conceal_failed": "Neither hiding nor minimizing worked.",
+    "minimize_failed": "The window couldn't be minimized.",
+    "quit_failed": "The app didn't quit.",
+    "restore_unsupported": "This can't be undone automatically.",
+    "restore_quit": "A quit app isn't started again. Open it yourself when you need it.",
+    "restore_automation_missing": "Close Call isn't allowed to control this browser any more, so it couldn't reopen the tab.",
+    "restore_no_file": "It was never saved to a file, so there's nothing to reopen.",
+    "restore_file_missing": "The file is no longer where it was.",
+    "unhide_failed": "macOS didn't show the app again.",
+    "unminimize_failed": "The window couldn't be brought back.",
+    "open_timeout": "The app didn't confirm in time that it opened the document.",
+    "open_failed": "The app couldn't open the document.",
     "macos": {
       "health": {
         "screen_watcher_missing": "Not available on this version of macOS. The hotkey, projector and lid triggers still work.",
@@ -508,7 +550,10 @@
     "needs_automation": "Needs permission to control the app.",
     "url_active_tab_only": "Sees the address of the active tab only.",
     "elevated_skipped": "Windows running as administrator are skipped.",
-    "atspi_restart_browser": "Needs desktop accessibility on and a browser restart."
+    "atspi_restart_browser": "Needs desktop accessibility on and a browser restart.",
+    "hides_whole_app": "Hides the whole browser, not just the tab.",
+    "hide_or_minimize": "Hides the app when every visible window of it matches, otherwise minimizes just the window.",
+    "arc_unverified": "Not yet tested with Arc on a real Mac."
   },
   "source": {
     "share_watcher": "Screen-share detection",
@@ -550,13 +595,15 @@
   },
   "activity": {
     "title": "Activity",
-    "lead": "Kept in memory only. It's gone when you quit Close Call, and restore works for {{duration}}.",
+    "lead": "Kept in memory only and gone when you quit Close Call. Restore works for {{duration}}; after that only what happened is kept, not which tab or file it was.",
     "empty_title": "Nothing has happened yet",
     "empty_body": "When Close Call closes or hides something, it shows up here with the reason.",
     "dry_run": "Dry run",
     "restore": "Restore",
     "restored": "Restored",
-    "not_restorable": "Can't be restored"
+    "not_restorable": "Can't be restored",
+    "restore_of": "Restored: {{trigger}}",
+    "details_cleared": "Details no longer kept"
   },
   "capability": {
     "close": "close {{kinds}}",
@@ -570,7 +617,14 @@
     "safari": "Safari",
     "firefox": "Firefox",
     "documents": "Documents",
-    "apps": "Apps and windows"
+    "apps": "Apps and windows",
+    "macos": {
+      "chromium": "Chrome and Chromium browsers",
+      "safari": "Safari",
+      "firefox": "Firefox",
+      "ax": "Windows and documents",
+      "apps": "Apps"
+    }
   },
   "support": {
     "full": "Works",

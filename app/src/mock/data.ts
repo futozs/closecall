@@ -413,6 +413,7 @@ export function seedActivity(now: number): RunReport[] {
       at_ms: now - minutes(42),
       trigger: { kind: "screen_share", confidence: "high" },
       dry_run: false,
+      restore_of: null,
       restorable: true,
       steps: [
         {
@@ -463,11 +464,13 @@ export function seedActivity(now: number): RunReport[] {
         },
       ],
     },
+    // Older than the restore window, so the engine has dropped titles, URLs and evidence.
     {
       run_id: 1,
       at_ms: now - minutes(60 * 20),
       trigger: { kind: "away", away: "15m" },
       dry_run: false,
+      restore_of: null,
       restorable: false,
       steps: [
         {
@@ -475,18 +478,13 @@ export function seedActivity(now: number): RunReport[] {
           summary: {
             kind: "tab",
             app_name: "Safari",
-            title: "Revolut",
-            url: "https://app.revolut.com/home",
+            title: "",
+            url: null,
             path: null,
           },
           action: "close",
           phase: "close_tabs",
-          because: [
-            {
-              rule: "away-close-banking",
-              evidence: { kind: "category", id: "banking", via: { kind: "domain", domain: "revolut.com" } },
-            },
-          ],
+          because: [],
           outcome: { kind: "done" },
         },
         {
@@ -494,18 +492,13 @@ export function seedActivity(now: number): RunReport[] {
           summary: {
             kind: "tab",
             app_name: "Safari",
-            title: "K&H e-bank",
-            url: "https://ebank.kh.hu/",
+            title: "",
+            url: null,
             path: null,
           },
           action: "close",
           phase: "close_tabs",
-          because: [
-            {
-              rule: "away-close-banking",
-              evidence: { kind: "category", id: "banking", via: { kind: "domain", domain: "kh.hu" } },
-            },
-          ],
+          because: [],
           outcome: { kind: "skipped", reason_key: "reason.changed_before_action" },
         },
       ],

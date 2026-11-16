@@ -48,8 +48,10 @@ pub struct Executed {
     pub on_unsaved: UnsavedPolicy,
     pub outcome: StepOutcome,
     pub untitled_save_dir: std::path::PathBuf,
-    /// Keys of every target this provider was told about for the run.
+    /// Keys of the targets this provider was told it acts on with the same action.
     pub planned: Vec<String>,
+    /// Keys of the run's protected targets.
+    pub protected: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

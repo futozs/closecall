@@ -3,6 +3,6 @@ import type { TargetKindTag } from "./TargetKindTag";
 
 /**
  * Enough to recognise a target in the UI. Shown only inside our own window, never in
- * notifications or logs.
+ * notifications or logs. Title, URL and path are cleared once the run's restore window ends.
  */
 export type TargetSummary = { kind: TargetKindTag, app_name: string, title: string, url: string | null, path: string | null, };

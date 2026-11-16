@@ -8,6 +8,7 @@ use std::error::Error;
 use std::io::Write;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::time::Duration;
 
 use closecall_engine::{Engine, EngineSettings};
 use tauri::{App, Manager, RunEvent, WindowEvent};
@@ -20,6 +21,8 @@ use crate::tray::{Mode, Tray};
 
 /// Also the Tauri identifier: TCC grants and the config directory are keyed to it.
 const APP_ID: &str = "hu.futozs.closecall";
+/// A provider's first scan has a 5 s budget; a little more covers the hand-off.
+const DIAG_READY_WAIT: Duration = Duration::from_secs(6);
 
 pub fn run() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -149,6 +152,10 @@ fn diag() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // The providers scan on their own threads; without this the report shows empty counts.
+    if !engine.wait_ready(DIAG_READY_WAIT) {
+        eprintln!("closecall diag: not every provider answered in time; counts may be incomplete");
+    }
     match writeln!(std::io::stdout().lock(), "{}", engine.diag()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(_) => ExitCode::FAILURE,

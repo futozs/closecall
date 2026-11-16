@@ -120,6 +120,13 @@
     "quit": "Leállítva",
     "notify_only": "Jelezve"
   },
+  "restore_past": {
+    "close": "Újra megnyitva",
+    "hide": "Újra látható",
+    "minimize": "Ablak visszaállítva",
+    "quit": "Újraindítva",
+    "notify_only": "Nem volt mit visszavonni"
+  },
   "outcome": {
     "fell_back": "{{action}}, kíméletesebben",
     "skipped": "Kihagyva",
@@ -233,7 +240,7 @@
   },
   "confirm": {
     "never": "Azonnal",
-    "countdown": "Előbb visszaszámol, „Megtartom” gombbal"
+    "countdown": "Előbb vár"
   },
   "matcher": {
     "kind_label": "Feltétel",
@@ -323,8 +330,8 @@
     "on_unsaved": "Ha egy dokumentumban nem mentett változtatás van",
     "on_unsaved_hint": "Ha nem tudni, van-e, úgy veszi, hogy van: a munkáddal sosem kockáztat.",
     "confirm": "Mielőtt közbelép",
-    "confirm_hint": "Visszaszámlálás közben megtarthatod az elemet. Csak tétlenségnél és túl régóta nyitott elemeknél működik.",
-    "confirm_not_allowed": "Visszaszámlálás csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem. Megosztás vagy zárolás közben nincs idő kérdezni, és a párbeszédablak a megosztott képernyőn látszana.",
+    "confirm_hint": "A Close Call ennyit vár, mielőtt közbelép. Tétlenségi szabálynál ha közben hozzányúlsz a billentyűzethez vagy az egérhez, elmarad. „Megtartom” gomb még nincs. Csak tétlenségnél és túl régóta nyitott elemeknél működik.",
+    "confirm_not_allowed": "Várni csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem. Megosztás vagy zárolás közben nincs idő várni.",
     "save": "Szabály mentése",
     "delete": "Szabály törlése",
     "delete_confirm": "Törlöd ezt a szabályt? Ezt nem lehet visszavonni.",
@@ -443,7 +450,7 @@
     "share-close-invoices": "Számlák és bérpapírok bezárása megosztáskor",
     "lid-close-adult": "Felnőtt tartalmú lapok bezárása, ha lecsukod a gépet",
     "away-close-banking": "Banki lapok bezárása 15 perc távollét után",
-    "bank-tab-open-too-long": "A 2 órája nyitott banki lapok bezárásának felajánlása",
+    "bank-tab-open-too-long": "A 2 órája nyitott banki lapok bezárása egy perc várakozás után",
     "private-windows-on-share": "Privát és inkognitó lapok bezárása megosztáskor"
   },
   "config": {
@@ -451,7 +458,7 @@
       "duplicate_rule_id": "Ezt az azonosítót már egy másik szabály használja.",
       "empty_when": "Válassz legalább egy eseményt, amelyre a szabály figyel.",
       "empty_targets": "Válassz legalább egyfajta elemet, amelyet nézzen.",
-      "countdown_not_allowed": "Visszaszámlálás csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem.",
+      "countdown_not_allowed": "Várni csak akkor lehet, ha minden esemény tétlenség vagy túl régóta nyitott elem.",
       "empty_composite": "Ebben a csoportban nincs feltétel. Adj hozzá egyet, vagy töröld a csoportot.",
       "lone_not": "A „Nem” egymagában szinte mindenre illik. Tedd egy „Mindegyik” csoportba egy másik feltétel mellé.",
       "invalid_glob": "Ez a minta hibás. Nézd meg, hogy minden [ és { le van-e zárva.",
@@ -461,6 +468,14 @@
       "invalid_display_vendor": "A kijelző EDID-gyártókódját add meg, egy 1 és 65535 közötti számot.",
       "unsupported_version": "Ezt a beállítást a Close Call egy újabb verziója írta. Frissítsd az alkalmazást, hogy szerkeszthesd.",
       "unknown": "Hiba itt: {{field}} ({{code}})."
+    },
+    "problem": {
+      "title": "A config.toml fájlod nincs használatban",
+      "unreadable": "A Close Call nem tudta megnyitni a config.toml fájlt, ezért egyelőre az ajánlott szabályokkal fut.",
+      "unparsable": "A config.toml szintaktikai hibát tartalmaz, ezért a Close Call egyelőre az ajánlott szabályokkal fut.",
+      "too_new": "A config.toml fájlt a Close Call egy újabb verziója írta, ezért ez a verzió egyelőre az ajánlott szabályokkal fut.",
+      "invalid": "A config.toml néhány beállítása érvénytelen, ezért a Close Call egyelőre az ajánlott szabályokkal fut.",
+      "kept": "A fájlodhoz nem nyúlt. Javítsd ki, és indítsd újra a Close Callt, vagy módosíts itt valamit: mentéskor a fájlod config.rejected.toml néven megmarad az új mellett."
     }
   },
   "reason": {
@@ -484,7 +499,34 @@
     "capture_ignored": "Egy kivételként megadott alkalmazás folyamatosan rögzíti a képernyőt, ezért ebből a jelből nem derül ki, ha új megosztás indul. A megosztást helyette a meetingalkalmazások és a böngészők megosztósávjáról ismeri fel.",
     "symbol_missing": "A rendszer ezen verzióján nem érhető el. A pánikgomb, a kivetítő és a fedél ettől még működik.",
     "x11_no_share_detection": "X11 alatt nem derül ki, ha valaki rögzíti a képernyőt. Megosztás előtt nyomd meg a pánikgombot.",
-    "private_not_restorable": "A privát lapokat soha nem nyitja meg újra, hogy ne kerüljenek az előzményeid közé.",
+    "private_not_restorable": "A privát lapokat soha nem nyitja meg újra, hogy ne kerüljenek az előzményeid közé. A Safari nem különbözteti meg őket, ezért a Safari-lapokat sem nyitja meg újra.",
+    "discard_untitled_hidden": "Még sosem volt elmentve, és mentés nélkül bezárva elveszne, ezért elrejtette.",
+    "autosave_discard_hidden": "Ez az alkalmazás magától ment, ezért mentés nélküli bezárás helyett elrejtette.",
+    "save_failed_hidden": "A mentés nem fejeződött be, ezért bezárás helyett elrejtette.",
+    "sheet_unrecognized_hidden": "Az alkalmazás nem a mentésről kérdezett, ezért a Close Call visszalépett, és elrejtette az ablakot.",
+    "sheet_open_hidden": "Az ablakban már nyitva volt egy párbeszédablak, ezért bezárás helyett elrejtette.",
+    "quit_with_documents_hidden": "Nyitott dokumentumok vannak benne, ezért leállítás helyett elrejtette.",
+    "other_windows_visible": "Az alkalmazásnak más ablakai is nyitva maradnak, ezért csak ezt az ablakot tette kis méretre.",
+    "protected_in_app": "Ugyanebben az alkalmazásban egy védett elem is nyitva van, például a meetinged, ezért nem rejtette el az alkalmazást.",
+    "close_failed": "Az alkalmazás nem zárta be.",
+    "window_unreachable": "Az alkalmazás nem válaszolt, amikor az ablakairól kérdezte.",
+    "app_not_running": "Az alkalmazás már nem fut.",
+    "handle_invalid": "A Close Call nem találta meg újra ezt az elemet.",
+    "script_failed": "Az alkalmazás hibát jelzett.",
+    "hide_failed": "A macOS nem rejtette el az alkalmazást.",
+    "close_and_hide_failed": "Nem sikerült bezárni, és az alkalmazást elrejteni sem.",
+    "conceal_failed": "Sem elrejteni, sem kis méretre tenni nem sikerült.",
+    "minimize_failed": "Az ablakot nem sikerült kis méretre tenni.",
+    "quit_failed": "Az alkalmazás nem lépett ki.",
+    "restore_unsupported": "Ezt nem lehet automatikusan visszacsinálni.",
+    "restore_quit": "A leállított alkalmazást nem indítja újra. Nyisd meg te, amikor kell.",
+    "restore_automation_missing": "A Close Call már nem vezérelheti ezt a böngészőt, ezért nem tudta újra megnyitni a lapot.",
+    "restore_no_file": "Sosem volt fájlba mentve, így nincs mit újra megnyitni.",
+    "restore_file_missing": "A fájl már nincs ott, ahol volt.",
+    "unhide_failed": "A macOS nem jelenítette meg újra az alkalmazást.",
+    "unminimize_failed": "Az ablakot nem sikerült visszahozni.",
+    "open_timeout": "Az alkalmazás nem jelezte időben, hogy megnyitotta a dokumentumot.",
+    "open_failed": "Az alkalmazás nem tudta megnyitni a dokumentumot.",
     "macos": {
       "health": {
         "screen_watcher_missing": "A macOS ezen verzióján nem érhető el. A pánikgomb, a kivetítő és a fedél ettől még működik.",
@@ -508,7 +550,10 @@
     "needs_automation": "Engedély kell hozzá az alkalmazás vezérléséhez.",
     "url_active_tab_only": "Csak az aktív lap címét látja.",
     "elevated_skipped": "A rendszergazdaként futó ablakokat kihagyja.",
-    "atspi_restart_browser": "Be kell kapcsolni az asztali akadálymentességet, és újra kell indítani a böngészőt."
+    "atspi_restart_browser": "Be kell kapcsolni az asztali akadálymentességet, és újra kell indítani a böngészőt.",
+    "hides_whole_app": "Az egész böngészőt elrejti, nem csak a lapot.",
+    "hide_or_minimize": "Az egész alkalmazást elrejti, ha minden látható ablaka illik a szabályra, különben csak az ablakot teszi kis méretre.",
+    "arc_unverified": "Valódi Macen még nem próbáltuk ki az Arc böngészővel."
   },
   "source": {
     "share_watcher": "Képernyőmegosztás észlelése",
@@ -550,13 +595,15 @@
   },
   "activity": {
     "title": "Napló",
-    "lead": "Csak a memóriában van: kilépéskor törlődik, és {{duration}} ideig lehet visszaállítani.",
+    "lead": "Csak a memóriában van, kilépéskor törlődik. {{duration}} ideig lehet visszaállítani, utána csak az marad meg, hogy mi történt, az nem, hogy melyik lappal vagy fájllal.",
     "empty_title": "Még nem történt semmi",
     "empty_body": "Ha a Close Call bezár vagy elrejt valamit, itt látod, az okával együtt.",
     "dry_run": "Próba",
     "restore": "Visszaállítás",
     "restored": "Visszaállítva",
-    "not_restorable": "Nem állítható vissza"
+    "not_restorable": "Nem állítható vissza",
+    "restore_of": "Visszaállítás: {{trigger}}",
+    "details_cleared": "A részleteket már nem őrzi"
   },
   "capability": {
     "close": "{{kinds}} bezárása",
@@ -570,7 +617,14 @@
     "safari": "Safari",
     "firefox": "Firefox",
     "documents": "Dokumentumok",
-    "apps": "Alkalmazások és ablakok"
+    "apps": "Alkalmazások és ablakok",
+    "macos": {
+      "chromium": "Chrome és Chromium-alapú böngészők",
+      "safari": "Safari",
+      "firefox": "Firefox",
+      "ax": "Ablakok és dokumentumok",
+      "apps": "Alkalmazások"
+    }
   },
   "support": {
     "full": "Működik",

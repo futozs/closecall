@@ -23,12 +23,13 @@ function Run({ report, onRestored }: { report: RunReport; onRestored: (report: R
       setState("error");
     }
   };
+  const trigger = triggerLabel(t, report.trigger, locale);
   return (
     <article className="border-t border-rule pt-5 pb-7">
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h2 className="flex flex-wrap items-baseline gap-x-2 font-semibold">
-            {triggerLabel(t, report.trigger, locale)}
+            {report.restore_of === null ? trigger : t("activity.restore_of", { trigger })}
             <span className="data text-sm font-normal text-ink-2">{formatWhen(report.at_ms, locale)}</span>
             {report.dry_run && (
               <span className="rounded-ctl border border-rule-strong px-1.5 text-xs font-medium text-ink-2">
@@ -44,9 +45,11 @@ function Run({ report, onRestored }: { report: RunReport; onRestored: (report: R
             {t("activity.restore")}
           </Button>
         ) : (
-          <span className="text-sm text-ink-3">
-            {state === "done" ? t("activity.restored") : t("activity.not_restorable")}
-          </span>
+          report.restore_of === null && (
+            <span className="text-sm text-ink-3">
+              {state === "done" ? t("activity.restored") : t("activity.not_restorable")}
+            </span>
+          )
         )}
       </header>
       {state === "error" && (
@@ -78,8 +81,16 @@ export function Activity() {
     };
   }, []);
 
-  const replace = (next: RunReport) =>
-    setRuns((current) => current?.map((report) => (report.run_id === next.run_id ? next : report)) ?? null);
+  // A restore is a run of its own: the run it undid can't be restored again, and the restore
+  // goes on top unless its event got there first.
+  const restored = (restore: RunReport) =>
+    setRuns((current) => {
+      if (!current) return current;
+      const marked = current.map((report) =>
+        report.run_id === restore.restore_of ? { ...report, restorable: false } : report,
+      );
+      return marked.some((report) => report.run_id === restore.run_id) ? marked : [restore, ...marked];
+    });
 
   return (
     <div>
@@ -90,7 +101,7 @@ export function Activity() {
       {failed && <ErrorNote>{t("common.error")}</ErrorNote>}
       {runs?.length === 0 && <EmptyState title={t("activity.empty_title")} body={t("activity.empty_body")} />}
       {runs?.map((report) => (
-        <Run key={report.run_id} report={report} onRestored={replace} />
+        <Run key={report.run_id} report={report} onRestored={restored} />
       ))}
     </div>
   );
