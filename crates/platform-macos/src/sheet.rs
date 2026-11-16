@@ -34,24 +34,61 @@ pub(crate) fn buttons<N: Node>(root: &N) -> Vec<N> {
     out
 }
 
+/// What a Save or Export panel has and an "unsaved changes" alert does not.
+const FORM_CONTROLS: [&str; 6] = [
+    "AXTextField",
+    "AXComboBox",
+    "AXPopUpButton",
+    "AXOutline",
+    "AXBrowser",
+    "AXTable",
+];
+
+fn has_form_controls<N: Node>(root: &N) -> bool {
+    fn walk<N: Node>(node: &N, depth: usize) -> bool {
+        node.children().iter().any(|child| {
+            child
+                .role()
+                .is_some_and(|role| FORM_CONTROLS.contains(&role.as_str()))
+                || (depth > 0 && walk(child, depth - 1))
+        })
+    }
+    walk(root, SEARCH_DEPTH)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Roles {
     pub count: usize,
     /// Save.
     pub default: Option<usize>,
     pub cancel: Option<usize>,
+    pub form_controls: bool,
 }
 
-pub(crate) fn roles<N: Node>(buttons: &[N], default: Option<&N>, cancel: Option<&N>) -> Roles {
+pub(crate) fn roles<N: Node>(
+    sheet: &N,
+    buttons: &[N],
+    default: Option<&N>,
+    cancel: Option<&N>,
+) -> Roles {
     let position = |wanted: Option<&N>| wanted.and_then(|w| buttons.iter().position(|b| b.same(w)));
     Roles {
         count: buttons.len(),
         default: position(default),
         cancel: position(cancel),
+        form_controls: has_form_controls(sheet),
     }
 }
 
 impl Roles {
+    /// Save, Don't Save and Cancel and nothing else: the only sheet it is safe to answer. A
+    /// "Terminate running processes?" sheet has two buttons, a Save panel has a name field.
+    fn is_save_alert(&self) -> bool {
+        self.count == 3
+            && !self.form_controls
+            && matches!((self.default, self.cancel), (Some(d), Some(c)) if d != c)
+    }
+
     /// "Don't Save", or "Delete" on an autosaved untitled document: the one button that is
     /// neither default nor cancel. `None` when that is ambiguous.
     fn other(&self) -> Option<usize> {
@@ -82,16 +119,19 @@ pub(crate) fn choose(
         UnsavedPolicy::SaveThenClose if !has_path => {
             SheetAnswer::CancelAndConceal(keys::UNTITLED_HIDDEN)
         }
-        UnsavedPolicy::SaveThenClose => roles.default.map_or(
-            SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN),
-            SheetAnswer::Press,
-        ),
         UnsavedPolicy::Discard if !has_path => {
             SheetAnswer::CancelAndConceal(keys::DISCARD_UNTITLED_HIDDEN)
         }
         UnsavedPolicy::Discard if autosaves => {
             SheetAnswer::CancelAndConceal(keys::AUTOSAVE_DISCARD_HIDDEN)
         }
+        _ if !roles.is_save_alert() => {
+            SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN)
+        }
+        UnsavedPolicy::SaveThenClose => roles.default.map_or(
+            SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN),
+            SheetAnswer::Press,
+        ),
         UnsavedPolicy::Discard => roles.other().map_or(
             SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN),
             SheetAnswer::Press,
@@ -153,12 +193,64 @@ mod tests {
         )
     }
 
-    fn sheet_roles(default: u32, cancel: u32) -> Roles {
-        let window = save_sheet_window();
-        let sheet = find_sheet(&window).unwrap();
+    fn roles_of(window: &Fake, default: u32, cancel: u32) -> Roles {
+        let sheet = find_sheet(window).unwrap();
         let found = buttons(&sheet);
         let by_id = |id| found.iter().find(|b| b.id == id).cloned();
-        roles(&found, by_id(default).as_ref(), by_id(cancel).as_ref())
+        roles(
+            &sheet,
+            &found,
+            by_id(default).as_ref(),
+            by_id(cancel).as_ref(),
+        )
+    }
+
+    fn sheet_roles(default: u32, cancel: u32) -> Roles {
+        roles_of(&save_sheet_window(), default, cancel)
+    }
+
+    #[test]
+    fn only_a_three_button_alert_counts_as_a_save_sheet() {
+        // Terminal's "Terminate running processes?": Terminate is the default button.
+        let terminate = node(
+            1,
+            "AXWindow",
+            vec![node(
+                3,
+                "AXSheet",
+                vec![node(10, "AXButton", vec![]), node(11, "AXButton", vec![])],
+            )],
+        );
+        let roles = roles_of(&terminate, 11, 10);
+        for policy in [UnsavedPolicy::SaveThenClose, UnsavedPolicy::Discard] {
+            assert_eq!(
+                choose(policy, true, false, roles),
+                SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN)
+            );
+        }
+
+        // A Save panel: a name field and a folder pop-up next to three buttons.
+        let panel = node(
+            1,
+            "AXWindow",
+            vec![node(
+                3,
+                "AXSheet",
+                vec![
+                    node(4, "AXTextField", vec![]),
+                    node(5, "AXGroup", vec![node(6, "AXPopUpButton", vec![])]),
+                    node(10, "AXButton", vec![]),
+                    node(11, "AXButton", vec![]),
+                    node(12, "AXButton", vec![]),
+                ],
+            )],
+        );
+        let roles = roles_of(&panel, 12, 11);
+        assert!(roles.form_controls);
+        assert_eq!(
+            choose(UnsavedPolicy::SaveThenClose, true, false, roles),
+            SheetAnswer::CancelAndConceal(keys::SHEET_UNRECOGNIZED_HIDDEN)
+        );
     }
 
     #[test]
@@ -195,6 +287,7 @@ mod tests {
             count: 3,
             default: Some(2),
             cancel: None,
+            form_controls: false,
         };
         assert_eq!(
             choose(UnsavedPolicy::Discard, true, false, no_cancel),
@@ -204,6 +297,7 @@ mod tests {
             count: 2,
             default: None,
             cancel: Some(1),
+            form_controls: false,
         };
         assert_eq!(
             choose(UnsavedPolicy::SaveThenClose, true, false, no_default),

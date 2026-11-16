@@ -13,6 +13,7 @@ pub(crate) use windows::WindowProvider;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use closecall_core::platform::ExecContext;
 use closecall_core::{Action, StepOutcome, Target, TargetId, TargetKind};
 
 use crate::apps::{self as running, RunningApp};
@@ -31,9 +32,10 @@ fn skipped(reason_key: &str) -> StepOutcome {
     }
 }
 
-fn failed(error: impl Into<String>) -> StepOutcome {
+/// `error` is a message key, like every other reason.
+fn failed(error: &str) -> StepOutcome {
     StepOutcome::Failed {
-        error: error.into(),
+        error: error.to_owned(),
     }
 }
 
@@ -44,20 +46,31 @@ fn fell_back(action: Action, reason_key: &str) -> StepOutcome {
     }
 }
 
-fn hide_app(pid: i32) -> StepOutcome {
-    if running::hide(pid) {
+/// Hiding the app would also hide a protected target of the same instance, such as the
+/// meeting tab next to the bank tab.
+fn shelters_protected(target: &Target, ctx: &ExecContext) -> bool {
+    ctx.protected.iter().any(|other| other.app == target.app)
+}
+
+fn hide_app(target: &Target, pid: i32, ctx: &ExecContext) -> StepOutcome {
+    if shelters_protected(target, ctx) {
+        skipped(keys::PROTECTED_IN_APP)
+    } else if running::hide(pid) {
         done()
     } else {
-        failed("NSRunningApplication.hide failed")
+        failed(keys::HIDE_FAILED)
     }
 }
 
-/// Hiding is lossless, so it is where a failed or impossible close ends up.
-fn hide_instead(pid: i32, reason_key: &str) -> StepOutcome {
-    if running::hide(pid) {
+/// Hiding is lossless, so it is where a failed or impossible close ends up, unless the app
+/// also shows something protected.
+fn hide_instead(target: &Target, pid: i32, ctx: &ExecContext, reason_key: &str) -> StepOutcome {
+    if shelters_protected(target, ctx) {
+        skipped(keys::PROTECTED_IN_APP)
+    } else if running::hide(pid) {
         fell_back(Action::Hide, reason_key)
     } else {
-        failed("could not close, and hiding the app failed too")
+        failed(keys::CLOSE_AND_HIDE_FAILED)
     }
 }
 
@@ -72,7 +85,7 @@ fn same_instance(target: &Target) -> Option<RunningApp> {
 fn unhide_app(target: &Target) -> StepOutcome {
     match same_instance(target) {
         Some(app) if running::unhide(app.pid) => done(),
-        Some(_) => failed("NSRunningApplication.unhide failed"),
+        Some(_) => failed(keys::UNHIDE_FAILED),
         None => skipped(keys::NOT_RUNNING),
     }
 }
@@ -101,9 +114,9 @@ fn window_peers<'a>(target: &Target, planned: &'a [Target]) -> Vec<&'a Target> {
 }
 
 /// Lets a tab provider close all planned tabs of a window in one call. The engine still
-/// sends a step for each of them, and it may already have run some (a Hide in the conceal
-/// phase), so this remembers both. Relies on `ExecContext.planned` holding only targets that
-/// are acted on: a notify-only tab in it would be closed with its window's batch.
+/// sends a step for each of them, so this remembers which it closed ahead and which it has
+/// already acted on. `ExecContext.planned` holds only targets whose step is the same action,
+/// so for a Close step every peer is a tab that was itself to be closed.
 #[derive(Default)]
 struct TabBatch {
     closed_ahead: HashMap<TargetId, Instant>,

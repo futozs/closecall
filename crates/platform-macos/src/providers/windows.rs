@@ -267,15 +267,16 @@ fn hides_whole_app(
         .all(|window| window == own || planned.contains(&window))
 }
 
-/// Hides the app when `whole_app` allows it, otherwise minimizes just this window.
+/// Hides the app when `whole_app` allows it, otherwise minimizes just this window. Never
+/// hides windows the run leaves alone, not even when minimizing fails.
 fn conceal(pid: i32, window: &WindowInfo, whole_app: bool) -> Option<Action> {
     if whole_app && apps::hide(pid) {
         return Some(Action::Hide);
     }
-    if window.ax.set_bool("AXMinimized", true) {
-        return Some(Action::Minimize);
-    }
-    apps::hide(pid).then_some(Action::Hide)
+    window
+        .ax
+        .set_bool("AXMinimized", true)
+        .then_some(Action::Minimize)
 }
 
 fn conceal_instead(
@@ -285,14 +286,21 @@ fn conceal_instead(
     reason_key: &str,
 ) -> StepOutcome {
     conceal(pid, window, whole_app).map_or_else(
-        || failed("could not conceal the window"),
+        || failed(keys::CONCEAL_FAILED),
         |action| fell_back(action, reason_key),
     )
 }
 
+/// A busy app (still saving, say) answers `CannotComplete`: that is no sign the window closed.
 fn still_open(pid: i32, window: &WindowInfo) -> bool {
-    window.ax.is_alive()
-        && read_windows(pid).is_ok_and(|all| all.iter().any(|w| w.window == window.window))
+    if !window.ax.is_alive() {
+        return false;
+    }
+    match read_windows(pid) {
+        Ok(all) => all.iter().any(|w| w.window == window.window),
+        Err(AXError::CannotComplete | AXError::APIDisabled) => true,
+        Err(_) => false,
+    }
 }
 
 fn wait_closed(pid: i32, window: &WindowInfo, until: Instant) -> bool {
@@ -338,7 +346,7 @@ fn answer_sheet(
     let cancel = found
         .element("AXCancelButton")
         .or_else(|| window.ax.element("AXCancelButton"));
-    let roles = sheet::roles(&buttons, default.as_ref(), cancel.as_ref());
+    let roles = sheet::roles(found, &buttons, default.as_ref(), cancel.as_ref());
     match sheet::choose(policy.policy, policy.has_path, policy.autosaves, roles) {
         SheetAnswer::Press(i) => {
             if buttons[i].press() && wait_closed(pid, window, deadline) {
@@ -368,6 +376,11 @@ fn press_close(
     policy: SheetPolicy,
     deadline: Instant,
 ) -> StepOutcome {
+    // A sheet that was there before us (Print, Export) is the user's; answering it would be a
+    // guess, and its default button might be the wrong one.
+    if sheet::find_sheet(&window.ax).is_some() {
+        return conceal_instead(pid, window, whole_app, keys::SHEET_OPEN_HIDDEN);
+    }
     let pressed = window
         .ax
         .element("AXCloseButton")
@@ -518,7 +531,13 @@ impl Provider for WindowProvider {
     }
 
     fn snapshot(&mut self, deadline: Instant) -> Result<Vec<Discovered>, ProviderError> {
-        scan(&self.last, deadline)
+        if !ax::is_trusted() {
+            return Err(ProviderError::PermissionMissing(Permission::Accessibility));
+        }
+        match self.last.cached() {
+            Some(found) => Ok(found),
+            None => scan(&self.last, deadline),
+        }
     }
 
     fn reverify(&mut self, target: &Target, deadline: Instant) -> Reverify {
@@ -550,18 +569,24 @@ impl Provider for WindowProvider {
             return skipped(keys::NOT_RUNNING);
         };
         let Some(wanted) = target_window(target) else {
-            return failed("malformed window handle");
+            return failed(keys::HANDLE_INVALID);
         };
         match step.action {
             Action::NotifyOnly => return done(),
             Action::Quit => return skipped(keys::UNSUPPORTED),
             Action::Close | Action::Hide | Action::Minimize => {}
         }
+        // Without the window, hiding the app is all that is left, and for a Minimize step even
+        // that would do more than asked.
+        let unreachable = |reason_key: &str| match step.action {
+            Action::Minimize => failed(reason_key),
+            _ => hide_instead(target, app.pid, ctx, reason_key),
+        };
         if !ax::is_trusted() {
-            return hide_instead(app.pid, keys::ACCESSIBILITY_MISSING);
+            return unreachable(keys::ACCESSIBILITY_MISSING);
         }
         let Ok(all) = read_windows(app.pid) else {
-            return hide_instead(app.pid, keys::WINDOW_UNREACHABLE);
+            return unreachable(keys::WINDOW_UNREACHABLE);
         };
         let Some(window) = all.iter().find(|w| w.window == wanted) else {
             return skipped(keys::TARGET_GONE);
@@ -573,11 +598,11 @@ impl Provider for WindowProvider {
         );
         match step.action {
             Action::Minimize if window.ax.set_bool("AXMinimized", true) => done(),
-            Action::Minimize => hide_instead(app.pid, keys::WINDOW_UNREACHABLE),
+            Action::Minimize => failed(keys::MINIMIZE_FAILED),
             Action::Hide => match conceal(app.pid, window, whole_app) {
                 Some(Action::Hide) => done(),
                 Some(action) => fell_back(action, keys::OTHER_WINDOWS_VISIBLE),
-                None => failed("could not conceal the window"),
+                None => failed(keys::CONCEAL_FAILED),
             },
             _ => close(&CloseRequest {
                 app: &app,
@@ -607,17 +632,17 @@ fn unminimize(target: &Target) -> StepOutcome {
         return skipped(keys::NOT_RUNNING);
     };
     let Some(wanted) = target_window(target) else {
-        return failed("malformed window handle");
+        return failed(keys::HANDLE_INVALID);
     };
     if !ax::is_trusted() {
         return skipped(keys::ACCESSIBILITY_MISSING);
     }
     let Ok(windows) = read_windows(app.pid) else {
-        return failed("could not read the app's windows");
+        return failed(keys::WINDOW_UNREACHABLE);
     };
     match windows.iter().find(|w| w.window == wanted) {
         Some(window) if window.ax.set_bool("AXMinimized", false) => done(),
-        Some(_) => failed("could not unminimize the window"),
+        Some(_) => failed(keys::UNMINIMIZE_FAILED),
         None => skipped(keys::TARGET_GONE),
     }
 }
@@ -638,9 +663,10 @@ fn reopen_document(target: &Target, deadline: Instant) -> StepOutcome {
     match apps::open_with(path, &target.app.id, deadline) {
         Ok(()) => done(),
         Err(OpenError::NoSuchApp) => skipped(keys::RESTORE_UNSUPPORTED),
-        Err(OpenError::Timeout) => failed("the app did not confirm opening the document in time"),
+        Err(OpenError::Timeout) => failed(keys::OPEN_TIMEOUT),
         Err(OpenError::Failed { domain, code }) => {
-            failed(format!("opening the document failed: {domain} {code}"))
+            tracing::debug!(%domain, code, "reopening a document failed");
+            failed(keys::OPEN_FAILED)
         }
     }
 }

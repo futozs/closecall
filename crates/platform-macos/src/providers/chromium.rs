@@ -16,7 +16,7 @@ use crate::apps::{self, RunningApp};
 use crate::observe::{self, Observer};
 use crate::osa::{self, OsaError};
 use crate::poll::{self, LastGood, Poller};
-use crate::script::{self, ChromiumPeer, ScriptId, ScriptWindow};
+use crate::script::{self, ChromiumPeer, ScriptId, ScriptWindow, TabClose};
 use crate::{automation, caps, keys};
 
 pub(crate) const ID: &str = "macos.chromium";
@@ -114,44 +114,69 @@ fn peer(target: &Target) -> Option<(TargetId, ChromiumPeer<'_>)> {
     ))
 }
 
-/// Closes the tab and the given peers of its window in one script. Returns the outcome for
-/// the tab and the peers that were closed with it.
+/// Closes the tab and the given peers of its window in one script, each only while it is
+/// unchanged. Returns the outcome for the tab and the peers that were closed with it.
 fn close_tabs(
-    bundle_id: &str,
+    target: &Target,
     pid: i32,
-    tab: &BrowserTab,
     peers: &[&Target],
+    ctx: &ExecContext,
     deadline: Instant,
 ) -> (StepOutcome, Vec<TargetId>) {
+    let bundle_id = target.app.id.as_str();
     if !automation::granted(bundle_id) {
-        return (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new());
+        return (
+            hide_instead(target, pid, ctx, keys::AUTOMATION_MISSING),
+            Vec::new(),
+        );
     }
-    let Some((window, tab)) = ids(tab) else {
-        return (failed("malformed tab handle"), Vec::new());
+    let (Some((own_id, own)), Some(window)) = (peer(target), window_of(target)) else {
+        return (failed(keys::HANDLE_INVALID), Vec::new());
     };
     let (peer_ids, peers): (Vec<TargetId>, Vec<ChromiumPeer<'_>>) =
         peers.iter().filter_map(|target| peer(target)).unzip();
-    let script = script::chromium_close_tabs(&window, &tab, &peers);
+    let ids: Vec<TargetId> = std::iter::once(own_id).chain(peer_ids).collect();
+    let tabs: Vec<ChromiumPeer<'_>> = std::iter::once(own).chain(peers).collect();
+    let script = script::chromium_close_tabs(&window, &tabs);
     match osa::run_in_app(bundle_id, &script, deadline) {
         Ok(Value::Null) => (skipped(keys::NOT_RUNNING), Vec::new()),
         Ok(value) => {
-            let closed = script::parse_chromium_closed(&value, peer_ids.len())
-                .map(|closed| {
-                    peer_ids
-                        .into_iter()
-                        .zip(closed)
-                        .filter_map(|(id, closed)| closed.then_some(id))
-                        .collect()
-                })
-                .unwrap_or_default();
-            (done(), closed)
+            let results = script::parse_chromium_closed(&value, ids.len()).unwrap_or_default();
+            let Some((own, peers)) = results.split_first() else {
+                return (failed(keys::SCRIPT_FAILED), Vec::new());
+            };
+            let closed = ids
+                .into_iter()
+                .skip(1)
+                .zip(peers)
+                .filter_map(|(id, result)| (*result == TabClose::Closed).then_some(id))
+                .collect();
+            let outcome = match own {
+                TabClose::Closed => done(),
+                TabClose::Changed => skipped(keys::CHANGED),
+                TabClose::Gone => skipped(keys::TARGET_GONE),
+            };
+            (outcome, closed)
         }
         Err(error) if error.is_missing_object() => (skipped(keys::TARGET_GONE), Vec::new()),
         Err(OsaError::NotPermitted | OsaError::NeedsConsent) => {
             automation::forget(bundle_id);
-            (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new())
+            (
+                hide_instead(target, pid, ctx, keys::AUTOMATION_MISSING),
+                Vec::new(),
+            )
         }
-        Err(_) => (hide_instead(pid, keys::CLOSE_FAILED), Vec::new()),
+        Err(_) => (
+            hide_instead(target, pid, ctx, keys::CLOSE_FAILED),
+            Vec::new(),
+        ),
+    }
+}
+
+fn window_of(target: &Target) -> Option<ScriptId> {
+    match &target.kind {
+        TargetKind::BrowserTab(tab) => ScriptId::decode(&tab.window.0),
+        _ => None,
     }
 }
 
@@ -172,7 +197,7 @@ fn reopen_tab(target: &Target, deadline: Instant) -> StepOutcome {
         return skipped(keys::NOT_RUNNING);
     }
     if !automation::granted(bundle_id) {
-        return skipped(keys::AUTOMATION_MISSING);
+        return skipped(keys::RESTORE_AUTOMATION_MISSING);
     }
     let window = ScriptId::decode(&tab.window.0);
     match osa::run_in_app(
@@ -184,11 +209,14 @@ fn reopen_tab(target: &Target, deadline: Instant) -> StepOutcome {
         Ok(_) => skipped(keys::NOT_RUNNING),
         Err(OsaError::NotPermitted | OsaError::NeedsConsent) => {
             automation::forget(bundle_id);
-            skipped(keys::AUTOMATION_MISSING)
+            skipped(keys::RESTORE_AUTOMATION_MISSING)
         }
         // The message can quote the URL; the number is enough to debug.
-        Err(OsaError::Script { number, .. }) => failed(format!("AppleScript error {number}")),
-        Err(error) => failed(error.to_string()),
+        Err(OsaError::Script { number, .. }) => {
+            tracing::debug!(number, "reopening a tab failed");
+            failed(keys::SCRIPT_FAILED)
+        }
+        Err(_) => failed(keys::SCRIPT_FAILED),
     }
 }
 
@@ -214,7 +242,10 @@ impl Provider for ChromiumProvider {
     }
 
     fn snapshot(&mut self, deadline: Instant) -> Result<Vec<Discovered>, ProviderError> {
-        Ok(scan(&self.last, deadline))
+        Ok(self
+            .last
+            .cached()
+            .unwrap_or_else(|| scan(&self.last, deadline)))
     }
 
     fn reverify(&mut self, target: &Target, deadline: Instant) -> Reverify {
@@ -229,6 +260,10 @@ impl Provider for ChromiumProvider {
         let (Some(_), Some((window, tab_id))) = (same_instance(target), ids(tab)) else {
             return Reverify::Gone;
         };
+        // Without a grant the Apple Event could put a consent prompt on the shared screen.
+        if !automation::granted(&target.app.id) {
+            return Reverify::Same;
+        }
         let script = script::chromium_tab_info(&window, &tab_id);
         match osa::run_in_app(&target.app.id, &script, deadline) {
             Ok(value) => match script::parse_tab_info(&value) {
@@ -242,8 +277,8 @@ impl Provider for ChromiumProvider {
                 }
                 None => Reverify::Gone,
             },
-            // Unverifiable is not gone: a hung browser must still be concealed, and `execute`
-            // falls back to hiding the app when the tab can't be addressed.
+            // Unverifiable is not gone: a hung browser must still be concealed. `execute`
+            // checks the tab again in the close script and hides the app if it can't.
             Err(_) => Reverify::Same,
         }
     }
@@ -255,9 +290,9 @@ impl Provider for ChromiumProvider {
         ctx: &ExecContext,
         deadline: Instant,
     ) -> StepOutcome {
-        let TargetKind::BrowserTab(tab) = &target.kind else {
+        if !matches!(target.kind, TargetKind::BrowserTab(_)) {
             return skipped(keys::UNSUPPORTED);
-        };
+        }
         self.batch.acted(target.id);
         if step.action == Action::Close && self.batch.take_closed_ahead(target.id) {
             return done();
@@ -267,10 +302,10 @@ impl Provider for ChromiumProvider {
         };
         match step.action {
             Action::NotifyOnly => done(),
-            Action::Hide => hide_app(app.pid),
+            Action::Hide => hide_app(target, app.pid, ctx),
             Action::Close => {
                 let peers = self.batch.peers(target, &ctx.planned);
-                let (outcome, closed) = close_tabs(&target.app.id, app.pid, tab, &peers, deadline);
+                let (outcome, closed) = close_tabs(target, app.pid, &peers, ctx, deadline);
                 self.batch.closed(closed);
                 outcome
             }

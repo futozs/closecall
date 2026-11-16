@@ -131,7 +131,7 @@ impl Provider for FirefoxProvider {
     }
 
     fn snapshot(&mut self, _deadline: Instant) -> Result<Vec<Discovered>, ProviderError> {
-        Ok(scan(&self.last))
+        Ok(self.last.cached().unwrap_or_else(|| scan(&self.last)))
     }
 
     fn reverify(&mut self, target: &Target, _deadline: Instant) -> Reverify {
@@ -156,7 +156,7 @@ impl Provider for FirefoxProvider {
         &mut self,
         step: &Step,
         target: &Target,
-        _ctx: &ExecContext,
+        ctx: &ExecContext,
         _deadline: Instant,
     ) -> StepOutcome {
         let Some(app) = same_instance(target) else {
@@ -164,10 +164,10 @@ impl Provider for FirefoxProvider {
         };
         match step.action {
             Action::NotifyOnly => done(),
-            Action::Hide => hide_app(app.pid),
+            Action::Hide => hide_app(target, app.pid, ctx),
             // Closing one Firefox tab would mean selecting it and sending ⌘W in front of the
             // audience; hiding the app is the honest fallback.
-            Action::Close => hide_instead(app.pid, keys::CLOSE_UNSUPPORTED),
+            Action::Close => hide_instead(target, app.pid, ctx, keys::CLOSE_UNSUPPORTED),
             Action::Minimize | Action::Quit => skipped(keys::UNSUPPORTED),
         }
     }

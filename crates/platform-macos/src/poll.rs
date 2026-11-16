@@ -124,12 +124,29 @@ pub(crate) fn spawn(
     Ok(Poller { stop })
 }
 
-/// Last successful per-app result, reused when that app times out once.
-pub(crate) struct LastGood<K>(Mutex<HashMap<K, Vec<Discovered>>>);
+/// Last successful per-app result, reused when that app times out once. After the first full
+/// scan it is also the provider's snapshot: the poller keeps it fresh, and a scan on the
+/// provider's command thread would make a share's actions queue behind it.
+pub(crate) struct LastGood<K> {
+    by_app: Mutex<HashMap<K, Vec<Discovered>>>,
+    complete: AtomicBool,
+}
 
 impl<K: Eq + Hash + Clone> LastGood<K> {
     pub(crate) fn new() -> Self {
-        Self(Mutex::new(HashMap::new()))
+        Self {
+            by_app: Mutex::new(HashMap::new()),
+            complete: AtomicBool::new(false),
+        }
+    }
+
+    /// Everything the last full scan found, once there has been one.
+    pub(crate) fn cached(&self) -> Option<Vec<Discovered>> {
+        if !self.complete.load(Ordering::SeqCst) {
+            return None;
+        }
+        let map = self.by_app.lock().unwrap_or_else(PoisonError::into_inner);
+        Some(map.values().flatten().cloned().collect())
     }
 
     pub(crate) fn resolve<E>(
@@ -137,7 +154,7 @@ impl<K: Eq + Hash + Clone> LastGood<K> {
         key: &K,
         result: Result<Vec<Discovered>, E>,
     ) -> Vec<Discovered> {
-        let mut map = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut map = self.by_app.lock().unwrap_or_else(PoisonError::into_inner);
         match result {
             Ok(found) => {
                 map.insert(key.clone(), found.clone());
@@ -147,11 +164,13 @@ impl<K: Eq + Hash + Clone> LastGood<K> {
         }
     }
 
+    /// Ends a full scan.
     pub(crate) fn retain(&self, alive: &HashSet<K>) {
-        self.0
+        self.by_app
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .retain(|key, _| alive.contains(key));
+        self.complete.store(true, Ordering::SeqCst);
     }
 }
 
@@ -232,6 +251,9 @@ mod tests {
     fn last_good_survives_one_failure() {
         let cache = LastGood::new();
         assert_eq!(cache.resolve::<()>(&1, Ok(vec![found("a", "A")])).len(), 1);
+        assert!(cache.cached().is_none(), "no full scan yet");
+        cache.retain(&HashSet::from([1]));
+        assert_eq!(cache.cached().map(|all| all.len()), Some(1));
         assert_eq!(cache.resolve(&1, Err(())).len(), 1);
         assert!(cache.resolve(&2, Err(())).is_empty());
         cache.retain(&HashSet::from([2]));

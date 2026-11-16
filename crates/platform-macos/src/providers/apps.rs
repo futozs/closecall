@@ -72,17 +72,22 @@ fn has_open_documents(app: &RunningApp) -> bool {
     }
 }
 
-fn quit(app: &RunningApp, policy: UnsavedPolicy) -> StepOutcome {
+fn quit(
+    target: &Target,
+    app: &RunningApp,
+    policy: UnsavedPolicy,
+    ctx: &ExecContext,
+) -> StepOutcome {
     if has_open_documents(app) {
         return match policy {
             UnsavedPolicy::SkipAndNotify => skipped(keys::UNSAVED_SKIPPED),
-            _ => hide_instead(app.pid, keys::QUIT_WITH_DOCUMENTS_HIDDEN),
+            _ => hide_instead(target, app.pid, ctx, keys::QUIT_WITH_DOCUMENTS_HIDDEN),
         };
     }
     if apps::terminate(app.pid) {
         done()
     } else {
-        failed("NSRunningApplication.terminate failed")
+        failed(keys::QUIT_FAILED)
     }
 }
 
@@ -116,7 +121,7 @@ impl Provider for AppProvider {
         &mut self,
         step: &Step,
         target: &Target,
-        _ctx: &ExecContext,
+        ctx: &ExecContext,
         _deadline: Instant,
     ) -> StepOutcome {
         let Some(app) = same_instance(target) else {
@@ -124,8 +129,8 @@ impl Provider for AppProvider {
         };
         match step.action {
             Action::NotifyOnly => done(),
-            Action::Hide => hide_app(app.pid),
-            Action::Quit => quit(&app, step.on_unsaved),
+            Action::Hide => hide_app(target, app.pid, ctx),
+            Action::Quit => quit(target, &app, step.on_unsaved, ctx),
             Action::Close | Action::Minimize => skipped(keys::UNSUPPORTED),
         }
     }

@@ -36,9 +36,7 @@ impl Ax {
     pub(crate) fn application(pid: i32) -> Self {
         // SAFETY: any pid is accepted; a dead one only makes later calls fail.
         let element = unsafe { AXUIElement::new_application(pid) };
-        // SAFETY: plain setter on a valid element.
-        unsafe { element.set_messaging_timeout(MESSAGING_TIMEOUT) };
-        Self(element)
+        Self::adopt(element)
     }
 
     pub(crate) fn raw(&self) -> &AXUIElement {
@@ -72,9 +70,17 @@ impl Ax {
         Some(value.as_bool())
     }
 
+    /// The timeout belongs to each element object, so every child gets its own: a window or
+    /// button of a hung app would otherwise wait the system default of about six seconds.
+    fn adopt(element: CFRetained<AXUIElement>) -> Self {
+        // SAFETY: plain setter on a valid element.
+        unsafe { element.set_messaging_timeout(MESSAGING_TIMEOUT) };
+        Self(element)
+    }
+
     pub(crate) fn element(&self, attribute: &str) -> Option<Ax> {
         let value = self.copy(attribute).ok()?.downcast::<AXUIElement>().ok()?;
-        Some(Ax(value))
+        Some(Self::adopt(value))
     }
 
     pub(crate) fn elements(&self, attribute: &str) -> Result<Vec<Ax>, AXError> {
@@ -87,7 +93,7 @@ impl Ax {
         Ok(array
             .to_vec()
             .into_iter()
-            .filter_map(|item| item.downcast::<AXUIElement>().ok().map(Ax))
+            .filter_map(|item| item.downcast::<AXUIElement>().ok().map(Self::adopt))
             .collect())
     }
 

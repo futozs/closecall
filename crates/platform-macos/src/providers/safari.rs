@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, mpsc};
 use std::time::Instant;
 
@@ -39,15 +39,23 @@ impl SafariProvider {
 }
 
 /// Safari has no tab ids: the handle is the 1-based index at scan time, and actions find
-/// the tab again by URL.
+/// the tab again by URL. The key is the window, the URL and which of that URL's tabs it is,
+/// like Firefox's: an index key would pass a closed tab's age on to its right neighbour.
 fn tabs(app: &RunningApp, windows: &[ScriptWindow]) -> Vec<Discovered> {
     let mut out = Vec::new();
     for window in windows {
         let window_handle = window.id.encode();
+        let mut seen: HashMap<Option<&str>, usize> = HashMap::new();
         for (i, tab) in window.tabs.iter().enumerate() {
             let index = i + 1;
+            let occurrence = seen.entry(tab.url.as_deref()).or_default();
+            *occurrence += 1;
             out.push(Discovered {
-                key: format!("{}|{window_handle}|{index}", app.pid),
+                key: format!(
+                    "{}|{window_handle}|{}|{occurrence}",
+                    app.pid,
+                    tab.url.as_deref().unwrap_or_default()
+                ),
                 target: poll::target(
                     ID,
                     app.app_ref(),
@@ -107,16 +115,21 @@ fn peer(target: &Target) -> Option<(TargetId, SafariTab<'_>)> {
 /// Closes the tab and the given peers of its window in one script. Returns the outcome for
 /// the tab and the peers that were closed with it.
 fn close_tabs(
+    target: &Target,
     pid: i32,
     tab: &BrowserTab,
     peers: &[&Target],
+    ctx: &ExecContext,
     deadline: Instant,
 ) -> (StepOutcome, Vec<TargetId>) {
     if !automation::granted(caps::SAFARI) {
-        return (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new());
+        return (
+            hide_instead(target, pid, ctx, keys::AUTOMATION_MISSING),
+            Vec::new(),
+        );
     }
     let Some((window, index)) = location(tab) else {
-        return (failed("malformed tab handle"), Vec::new());
+        return (failed(keys::HANDLE_INVALID), Vec::new());
     };
     let own = SafariTab {
         index,
@@ -148,9 +161,15 @@ fn close_tabs(
         Err(error) if error.is_missing_object() => (skipped(keys::TARGET_GONE), Vec::new()),
         Err(OsaError::NotPermitted | OsaError::NeedsConsent) => {
             automation::forget(caps::SAFARI);
-            (hide_instead(pid, keys::AUTOMATION_MISSING), Vec::new())
+            (
+                hide_instead(target, pid, ctx, keys::AUTOMATION_MISSING),
+                Vec::new(),
+            )
         }
-        Err(_) => (hide_instead(pid, keys::CLOSE_FAILED), Vec::new()),
+        Err(_) => (
+            hide_instead(target, pid, ctx, keys::CLOSE_FAILED),
+            Vec::new(),
+        ),
     }
 }
 
@@ -175,7 +194,10 @@ impl Provider for SafariProvider {
     }
 
     fn snapshot(&mut self, deadline: Instant) -> Result<Vec<Discovered>, ProviderError> {
-        Ok(scan(&self.last, deadline))
+        Ok(self
+            .last
+            .cached()
+            .unwrap_or_else(|| scan(&self.last, deadline)))
     }
 
     fn reverify(&mut self, target: &Target, deadline: Instant) -> Reverify {
@@ -189,6 +211,10 @@ impl Provider for SafariProvider {
         let (Some(_), Some((window, index))) = (same_instance(target), location(tab)) else {
             return Reverify::Gone;
         };
+        // Without a grant the Apple Event could put a consent prompt on the shared screen.
+        if !automation::granted(caps::SAFARI) {
+            return Reverify::Same;
+        }
         let script = script::safari_tab_info(&window, index, tab.url.as_deref());
         match osa::run_in_app(caps::SAFARI, &script, deadline) {
             Ok(value) => match script::parse_safari_tab_info(&value) {
@@ -227,10 +253,10 @@ impl Provider for SafariProvider {
         };
         match step.action {
             Action::NotifyOnly => done(),
-            Action::Hide => hide_app(app.pid),
+            Action::Hide => hide_app(target, app.pid, ctx),
             Action::Close => {
                 let peers = self.batch.peers(target, &ctx.planned);
-                let (outcome, closed) = close_tabs(app.pid, tab, &peers, deadline);
+                let (outcome, closed) = close_tabs(target, app.pid, tab, &peers, ctx, deadline);
                 self.batch.closed(closed);
                 outcome
             }
@@ -264,10 +290,22 @@ mod tests {
             name: "Safari".into(),
             exe: None,
         };
-        let windows =
-            script::parse_safari(&json!([[3, 2, ["A", "B"], ["https://a/", "https://b/"]]]));
+        let windows = script::parse_safari(&json!([[
+            3,
+            2,
+            ["A", "B", "C"],
+            ["https://a/", "https://b/", "https://a/"]
+        ]]));
         let found = tabs(&app, &windows);
-        assert_eq!(found[1].key, "7|i:3|2");
+        let keys: Vec<&str> = found.iter().map(|d| d.key.as_str()).collect();
+        assert_eq!(
+            keys,
+            [
+                "7|i:3|https://a/|1",
+                "7|i:3|https://b/|1",
+                "7|i:3|https://a/|2"
+            ]
+        );
         let TargetKind::BrowserTab(tab) = &found[1].target.kind else {
             panic!("expected a tab");
         };

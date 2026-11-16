@@ -100,19 +100,27 @@ fn swallow_missing(body: &str) -> String {
     )
 }
 
+/// A window that closes mid-scan, or a browser without `mode`, is skipped; a timeout, a lost
+/// connection or a revoked grant fails the scan, so its tabs are kept rather than dropped.
 pub(crate) const CHROMIUM_LIST: &str = r#"set out to {}
 repeat with wid in (get id of every window)
 	set w to window id (contents of wid)
 	set m to missing value
 	try
 		set m to mode of w
+	on error number n
+		if n is -1712 or n is -609 or n is -1743 then error number n
 	end try
 	set ai to 0
 	try
 		set ai to active tab index of w
+	on error number n
+		if n is -1712 or n is -609 or n is -1743 then error number n
 	end try
 	try
 		set end of out to {contents of wid, m, ai, id of every tab of w, title of every tab of w, URL of every tab of w}
+	on error number n
+		if n is -1712 or n is -609 or n is -1743 then error number n
 	end try
 end repeat
 return out"#;
@@ -125,8 +133,9 @@ pub(crate) fn chromium_tab_info(window: &ScriptId, tab: &ScriptId) -> String {
     ))
 }
 
-/// Another planned tab of the same window. It is closed in the same call only while its
-/// title and URL are what the plan was made from, which stands in for its own reverify.
+/// A tab to close by id. It is closed only while its title and URL are what the plan was
+/// made from: for the step's own tab that guards against a reverify that could not reach the
+/// browser, for the other planned tabs of the window it stands in for their own reverify.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ChromiumPeer<'a> {
     pub id: ScriptId,
@@ -134,43 +143,48 @@ pub(crate) struct ChromiumPeer<'a> {
     pub url: Option<&'a str>,
 }
 
-/// Closes `tab`, then every unchanged peer. Returns one boolean per peer.
-pub(crate) fn chromium_close_tabs(
-    window: &ScriptId,
-    tab: &ScriptId,
-    peers: &[ChromiumPeer<'_>],
-) -> String {
-    let entries = peers
+/// What [`chromium_close_tabs`] did with one tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TabClose {
+    Closed,
+    Changed,
+    Gone,
+}
+
+/// Closes each unchanged tab, in order. Returns 1 (closed), -1 (changed) or 0 (gone) per tab.
+pub(crate) fn chromium_close_tabs(window: &ScriptId, tabs: &[ChromiumPeer<'_>]) -> String {
+    let entries = tabs
         .iter()
-        .map(|peer| {
+        .map(|tab| {
             format!(
                 "{{{}, {}, {}}}",
-                peer.id.literal(),
-                quote(peer.title),
-                optional_text(peer.url)
+                tab.id.literal(),
+                quote(tab.title),
+                optional_text(tab.url)
             )
         })
         .collect::<Vec<_>>()
         .join(", ");
     format!(
         "set w to window id {wid}\n\
-         close (tab id {tid} of w)\n\
          set out to {{}}\n\
          repeat with p in {{{entries}}}\n\
          set q to contents of p\n\
-         set r to false\n\
+         set r to 0\n\
          try\n\
          set x to tab id (item 1 of q) of w\n\
+         set r to -1\n\
          considering case\n\
-         if (title of x) is (item 2 of q) and (URL of x) is (item 3 of q) then set r to true\n\
+         if (title of x) is (item 2 of q) and (URL of x) is (item 3 of q) then set r to 1\n\
          end considering\n\
-         if r then close x\n\
+         if r is 1 then close x\n\
+         on error number n\n\
+         if n is not -1728 and n is not -1719 then error number n\n\
          end try\n\
          set end of out to r\n\
          end repeat\n\
          return out",
         wid = window.literal(),
-        tid = tab.literal(),
     )
 }
 
@@ -326,13 +340,17 @@ pub(crate) fn parse_safari_closed(value: &Value, expected: usize) -> Option<Vec<
     Some(items.iter().map(index).collect())
 }
 
-/// Whether each peer of [`chromium_close_tabs`] was closed.
-pub(crate) fn parse_chromium_closed(value: &Value, expected: usize) -> Option<Vec<bool>> {
+/// What [`chromium_close_tabs`] did with each tab.
+pub(crate) fn parse_chromium_closed(value: &Value, expected: usize) -> Option<Vec<TabClose>> {
     let items = value.as_array().filter(|items| items.len() == expected)?;
     Some(
         items
             .iter()
-            .map(|item| item.as_bool() == Some(true))
+            .map(|item| match item.as_i64() {
+                Some(1) => TabClose::Closed,
+                Some(-1) => TabClose::Changed,
+                _ => TabClose::Gone,
+            })
             .collect(),
     )
 }
@@ -716,22 +734,23 @@ mod tests {
     fn chromium_scripts_address_tabs_by_id() {
         let script = chromium_close_tabs(
             &ScriptId::Text("w1".into()),
-            &ScriptId::Text("t1".into()),
-            &[],
+            &[ChromiumPeer {
+                id: ScriptId::Text("t1".into()),
+                title: "Bank",
+                url: Some("https://bank.example/"),
+            }],
         );
         assert!(script.contains(r#"set w to window id "w1""#));
-        assert!(script.contains(r#"close (tab id "t1" of w)"#));
-        assert!(script.contains("repeat with p in {}"));
+        assert!(script.contains(r#"repeat with p in {{"t1", "Bank", "https://bank.example/"}}"#));
         let info = chromium_tab_info(&ScriptId::Int(1), &ScriptId::Int(2));
         assert!(info.contains("tab id 2 of window id 1"));
         assert!(info.contains("-1728"));
     }
 
     #[test]
-    fn chromium_batch_closes_peers_only_while_unchanged() {
+    fn chromium_batch_closes_every_tab_only_while_unchanged() {
         let script = chromium_close_tabs(
             &ScriptId::Int(1),
-            &ScriptId::Int(10),
             &[
                 ChromiumPeer {
                     id: ScriptId::Int(11),
@@ -748,20 +767,35 @@ mod tests {
         assert!(script.contains(
             r#"{{11, "Bank \"x\"", "https://bank.example/"}, {"t-12", "Mail", missing value}}"#
         ));
-        let own = script.find("close (tab id 10 of w)").unwrap();
-        let peers = script.find("repeat with p in").unwrap();
-        assert!(own < peers);
+        assert!(
+            !script.contains("close (tab id"),
+            "no tab is closed unchecked"
+        );
         assert!(script.contains("considering case"));
-        assert!(script.contains("if r then close x"));
+        assert!(script.contains("if r is 1 then close x"));
+        assert!(
+            script.contains("if n is not -1728 and n is not -1719 then error number n"),
+            "a timeout fails the script instead of reading as gone"
+        );
+    }
+
+    #[test]
+    fn the_tab_list_fails_on_timeouts_instead_of_dropping_windows() {
+        assert_eq!(
+            CHROMIUM_LIST
+                .matches("if n is -1712 or n is -609 or n is -1743 then error number n")
+                .count(),
+            3
+        );
     }
 
     #[test]
     fn parses_batch_results_and_rejects_mismatched_lengths() {
         assert_eq!(
-            parse_chromium_closed(&json!([true, false]), 2),
-            Some(vec![true, false])
+            parse_chromium_closed(&json!([1, -1, 0]), 3),
+            Some(vec![TabClose::Closed, TabClose::Changed, TabClose::Gone])
         );
-        assert_eq!(parse_chromium_closed(&json!([true]), 2), None);
+        assert_eq!(parse_chromium_closed(&json!([1]), 2), None);
         assert_eq!(parse_chromium_closed(&json!(null), 0), None);
         assert_eq!(
             parse_safari_closed(&json!([3, 0]), 2),
