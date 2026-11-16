@@ -27,6 +27,7 @@
     "watching": "Watching",
     "sharing": "Screen is shared, guard on",
     "mirrored": "Display mirrored, guard on",
+    "external": "External display, guard on",
     "paused": "Paused until {{time}}"
   },
   "confidence": {
@@ -39,22 +40,26 @@
       "idle": "Watching",
       "sharing": "Sharing now",
       "mirrored": "Mirroring now",
+      "external": "External display",
       "paused": "Paused"
     },
     "title": {
       "idle": "Nothing is being shared",
       "sharing": "Your screen is being shared",
       "mirrored": "This screen is mirrored to another display",
+      "external": "An external display is connected",
       "paused": "Paused until {{time}}"
     },
     "body": {
       "idle": "Close Call acts the moment a share starts, a projector connects or the lid closes. Until then it only watches.",
       "sharing": "Guard is on. Anything sensitive that opens now gets closed or hidden straight away.",
       "mirrored": "Guard is on. Anything sensitive that opens on this screen gets closed or hidden straight away.",
+      "external": "Guard is on, because your rules treat a display you haven't ignored like a projector. Anything sensitive that opens now gets closed or hidden straight away.",
       "paused": "Nothing is closed automatically until then. The panic hotkey still works."
     },
     "confidence": "{{level}} confidence",
     "call_likely": "A call looks like it's about to start. Now is a good moment to clean up.",
+    "ignored_capture": "{{app}} keeps the screen captured all the time. It's on your ignore list, so that alone isn't a share; shares from meeting apps and browsers are recognised by their sharing bars.",
     "clean_now": "Clean up now",
     "simulate": "Simulate a screen share",
     "pause_label": "Pause automatic cleanup",
@@ -147,6 +152,7 @@
     "panic": "Panic hotkey",
     "screen_share": "Screen share",
     "display_mirrored": "Projector or mirroring",
+    "display_connected": "External display connected",
     "call_likely": "Call about to start",
     "will_sleep": "Going to sleep",
     "lid_closed": "Lid closed",
@@ -159,6 +165,7 @@
     "panic": "Panic hotkey",
     "screen_share": "Screen share starts",
     "display_mirrored": "Projector or mirroring",
+    "display_connected": "An external display connects",
     "call_likely": "A call is about to start",
     "will_sleep": "Computer goes to sleep",
     "lid_closed": "Lid closes",
@@ -171,6 +178,7 @@
     "panic": "panic hotkey",
     "screen_share": "screen share",
     "display_mirrored": "projector",
+    "display_connected": "external display",
     "call_likely": "call starting",
     "will_sleep": "sleep",
     "lid_closed": "lid closed",
@@ -303,6 +311,7 @@
     "when": "When",
     "when_hint": "Any of these arms the rule.",
     "share_hint": "Uses the detection confidence set in Settings.",
+    "display_connected_hint": "Any display you haven't ignored in Settings, mirrored or not.",
     "targets": "Look at",
     "match": "Match",
     "match_hint": "What makes an item sensitive. Protected items are never touched, whatever this says.",
@@ -447,6 +456,9 @@
       "lone_not": "“Not” on its own matches almost everything. Combine it with another condition under “All of”.",
       "invalid_glob": "This pattern isn't valid. Check that every [ and { is closed.",
       "invalid_domain": "Enter a bare domain such as otpbank.hu, without https:// or a path.",
+      "empty_app": "Enter the app's bundle ID or name.",
+      "empty_display_name": "Enter part of the display's name.",
+      "invalid_display_vendor": "Use the display's EDID vendor code, a number from 1 to 65535.",
       "unsupported_version": "This configuration was written by a newer Close Call. Update the app to edit it.",
       "unknown": "Problem with {{field}} ({{code}})."
     }
@@ -469,9 +481,19 @@
     "unsupported": "This app doesn't allow that action.",
     "experimental_off": "Experimental, switched off.",
     "watcher_noisy": "Reports activity even when nothing is happening, often because of a dock or a recording tool. Used only as a hint.",
+    "capture_ignored": "An app on your ignore list keeps the screen captured, so this signal can't tell a new share apart. Shares are recognised from the sharing bars of meeting apps and browsers instead.",
     "symbol_missing": "Not available on this version of the system. The hotkey, projector and lid triggers still work.",
     "x11_no_share_detection": "X11 can't tell when the screen is captured. Use the panic hotkey before sharing.",
-    "private_not_restorable": "Private tabs are never reopened, so they don't end up in your history."
+    "private_not_restorable": "Private tabs are never reopened, so they don't end up in your history.",
+    "macos": {
+      "health": {
+        "screen_watcher_missing": "Not available on this version of macOS. The hotkey, projector and lid triggers still work.",
+        "screen_watcher_noisy": "It was already on when Close Call started, often because of a dock or a recording tool. Used only as a hint until it turns off once.",
+        "display_callback_failed": "macOS didn't let Close Call watch for display changes.",
+        "no_input_device": "No microphone is connected.",
+        "window_list_unavailable": "macOS didn't return the list of windows, so sharing bars can't be seen."
+      }
+    }
   },
   "note": {
     "unknown": "Limited: {{key}}",
@@ -492,10 +514,18 @@
     "share_watcher": "Screen-share detection",
     "notify_proc": "Instant share signal",
     "display": "Projector and mirroring",
+    "share_ui": "Sharing bars of meeting apps and browsers",
     "call_audio": "Microphone and camera in use",
     "power": "Sleep and lid",
     "lock": "Screen lock",
-    "idle": "Idle time"
+    "idle": "Idle time",
+    "macos": {
+      "skylight": "Screen-share detection",
+      "share_ui": "Sharing bars of meeting apps and browsers",
+      "display": "Projectors and displays",
+      "session": "Screen lock, sleep and lid",
+      "call": "Microphone in use"
+    }
   },
   "health": {
     "ok": "Working",
@@ -580,6 +610,29 @@
     "protect_audible_hint": "Keeps the tab with your music or a video call.",
     "protect_pinned": "Protect pinned tabs",
     "protect_pinned_hint": "Pinned tabs are usually the ones you keep open on purpose.",
+    "ignore": {
+      "title": "Ignored capture and displays",
+      "lead": "Some apps capture the screen all day to drive a display, such as the DisplayLink software for USB docks. Neither the apps nor the displays listed here ever start a cleanup.",
+      "apps": "Apps that capture all the time",
+      "apps_hint": "While one of them runs, a capture macOS can't attribute counts as theirs. Shares from meeting apps and browsers are still recognised by their sharing bars.",
+      "apps_label": "App to ignore",
+      "apps_pick": "Pick a running app",
+      "apps_none": "No other app is running.",
+      "running": "Running",
+      "not_running": "Not running",
+      "displays": "Displays that are never a projector",
+      "displays_hint": "Your own monitors, or a projector you use every day. Mirrored or not, they don't set anything off.",
+      "displays_label": "Display to ignore",
+      "displays_pick": "Pick a connected display",
+      "displays_none": "No other external display is connected.",
+      "connected": "Connected",
+      "not_connected": "Not connected",
+      "display_name": "Name contains “{{name}}”",
+      "display_model": "{{vendor}}, model code {{model}}",
+      "display_unnamed": "Display {{id}}",
+      "treat_connected": "Treat other external displays like a projector",
+      "treat_connected_hint": "Rules that run for a projector also run when a display that isn't listed above connects, mirrored or not. Off by default: a desk monitor would set them off every day."
+    },
     "list_add": "Add",
     "list_remove": "Remove {{item}}",
     "list_empty": "None yet.",
@@ -606,6 +659,7 @@
       "accessibility": "Accessibility",
       "automation": "Browsers and apps",
       "notifications": "Notifications",
+      "capture": "Always-on capture",
       "os": "System settings",
       "dry_run": "Dry run",
       "login": "Open at login"
@@ -637,6 +691,12 @@
     "notifications": {
       "title": "Get a short note after each cleanup",
       "body": "Only counts, like “3 closed, 1 hidden”. Never titles, addresses or file names."
+    },
+    "capture": {
+      "title": "{{app}} captures your screen all the time",
+      "body": "It drives the monitors on your dock by capturing the screen, so macOS reports a screen share all day. If you ignore it, Close Call recognises real shares from the sharing bars of meeting apps and browsers instead.",
+      "toggle": "Don't count it as a share",
+      "toggle_hint": "You can change this later in Settings."
     },
     "os": {
       "title": "Worth changing in System Settings",

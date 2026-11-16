@@ -50,14 +50,21 @@ impl Core {
             state.config.rules.len(),
             state.config.categories.len()
         ));
-        let share = state.fusion.share_state(state.config.share_min_confidence);
+        let share = state.fusion.share_state(&state.config);
         line(format!(
-            "share: {}, mirrored: {}, call likely: {}, guard: {}, paused: {}",
+            "share: {}, mirrored: {}, external display: {}, call likely: {}, guard: {}, paused: {}",
             if share.active { "active" } else { "inactive" },
             yes_no(share.mirrored_display),
+            yes_no(share.external_display),
             yes_no(share.call_likely),
             if state.guard_active(now) { "on" } else { "off" },
             yes_no(state.paused(now)),
+        ));
+        line(format!(
+            "ignore: {} capture apps, {} displays; capture put down to an ignored app: {}",
+            state.config.ignore.capture_apps.len(),
+            state.config.ignore.displays.len(),
+            yes_no(share.ignored_capture.is_some()),
         ));
 
         line("providers:".to_owned());

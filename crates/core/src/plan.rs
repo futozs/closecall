@@ -25,6 +25,7 @@ fn fires(trigger: &Trigger, fired: &FiredTrigger) -> bool {
         (Trigger::Panic, FiredTrigger::Panic)
         | (Trigger::ScreenShare, FiredTrigger::ScreenShare { .. })
         | (Trigger::DisplayMirrored, FiredTrigger::DisplayMirrored)
+        | (Trigger::DisplayConnected, FiredTrigger::DisplayConnected)
         | (Trigger::CallLikely, FiredTrigger::CallLikely)
         | (Trigger::WillSleep, FiredTrigger::WillSleep)
         | (Trigger::LidClosed, FiredTrigger::LidClosed)

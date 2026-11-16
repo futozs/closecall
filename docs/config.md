@@ -34,6 +34,7 @@ The editor fetches that URL, not Close Call. Point it at a local copy of the sch
 | `untitled_save_dir` | path | `"~/Documents/Close Call"` | Where never-saved documents are saved under `save_then_close`, when the app allows it. |
 | `restore_window` | duration | `"2h"` | How long closed items can be restored. The list is kept in memory only. |
 | `[protect]` | table | see below | Things never touched, whatever the rules say. |
+| `[ignore]` | table | see below | Screen capture and displays that never count as a share or a projector. |
 | `[[categories]]` | array of tables | none | Your own categories, next to the built-in ones. |
 | `[[rule]]` | array of tables | none | The rules. |
 
@@ -52,6 +53,41 @@ Protection always wins over every rule.
 | `pinned_tabs` | bool | `false` |
 
 The app that is capturing the screen, when the OS tells us, and Close Call's own windows are always protected.
+
+## `[ignore]`
+
+`protect` spares items from a run; `ignore` keeps the run from starting. Settings has an "Ignored
+capture and displays" section that adds entries from the running apps and the connected displays.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `capture_apps` | app selectors | recommended preset: `[{ bundle_id = "com.displaylink.DisplayLinkUserAgent" }]`; empty preset: `[]` | Screen capture by these apps is not a share. |
+| `displays` | display selectors | `[]` | These displays are never a projector, mirrored or not. |
+
+Some apps capture the screen for as long as they run, so the OS reports a share all day. DisplayLink
+Manager does this to drive the monitors on a DisplayLink USB dock. While an app from `capture_apps`
+runs, a capture the OS cannot attribute to an app is put down to it and ignored. macOS cannot tell a
+second capture apart while the first one holds the signal, so shares are then recognised from the
+sharing bars of Zoom, Teams, Slack, Webex, Discord and Chromium browsers instead. Remote-access
+agents such as AnyDesk, Splashtop or TeamViewer are not in the preset on purpose: they capture only
+during a remote session, and a remote session is a real share.
+
+A display selector is either part of the name, matched case- and accent-insensitively, or the
+display's EDID vendor and model codes, optionally with its serial number:
+
+```toml
+[ignore]
+capture_apps = [{ bundle_id = "com.displaylink.DisplayLinkUserAgent" }]
+displays = [
+  { name = "LG HDR" },                                   # every display whose name contains this
+  { id = { vendor = 7789, model = 23481 } },             # every display of this model
+  { id = { vendor = 4675, model = 2, serial = 16843009 } }, # this one unit
+]
+```
+
+`vendor` must be 1–65535: EDID packs the three-letter manufacturer code (`GSM` for LG) into 16 bits,
+and anything else is the OS saying it does not know. A display mirrored from the moment it was
+connected has no name on macOS, so use its codes.
 
 ## `[[categories]]`
 
@@ -90,7 +126,8 @@ Built-in categories: `adult`, `banking`, `webmail`, `medical`, `password_manager
 |---|---|
 | `"panic"` | The hotkey, the tray item or `closecall panic`. |
 | `"screen_share"` | A screen share or recording starts (best effort, per OS). |
-| `"display_mirrored"` | A projector or mirrored display is connected. |
+| `"display_mirrored"` | A projector or mirrored display is connected, unless it is in `ignore.displays`. |
+| `"display_connected"` | An external display that is not in `ignore.displays` is connected, mirrored or not. Not in the recommended preset: a desk monitor would set it off every day. While such a display stays connected, share-guard keeps acting on its rules. |
 | `"call_likely"` | A meeting app uses the mic or camera, or a share picker opens. Meant for notify-only pre-flight rules. |
 | `"will_sleep"` | The machine is about to sleep. |
 | `"lid_closed"` | The lid closes. |

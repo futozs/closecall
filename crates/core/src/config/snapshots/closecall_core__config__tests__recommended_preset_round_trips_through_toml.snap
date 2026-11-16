@@ -1,6 +1,5 @@
 ---
 source: crates/core/src/config/tests.rs
-assertion_line: 53
 expression: text
 ---
 version = 1
@@ -17,6 +16,12 @@ apps = []
 domains = []
 audible_tabs = false
 pinned_tabs = false
+
+[ignore]
+displays = []
+
+[[ignore.capture_apps]]
+bundle_id = "com.displaylink.DisplayLinkUserAgent"
 
 [[rule]]
 id = "share-close-sensitive-tabs"

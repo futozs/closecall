@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::*;
+use crate::DisplayId;
 
 fn codes(config: &Config) -> Vec<(String, String)> {
     config
@@ -54,6 +55,119 @@ fn recommended_preset_has_the_documented_rules() {
         [CategoryId("meeting".to_owned())]
     );
     assert!(config.validate().is_empty(), "{:?}", config.validate());
+}
+
+#[test]
+fn recommended_preset_ignores_displaylink_but_arms_no_display_connected_rule() {
+    let config = Config::recommended();
+    assert_eq!(
+        config.ignore.capture_apps,
+        [AppSelector::BundleId(
+            "com.displaylink.DisplayLinkUserAgent".to_owned()
+        )]
+    );
+    assert!(config.ignore.displays.is_empty());
+    assert!(
+        config
+            .rules
+            .iter()
+            .all(|rule| !rule.when.contains(&Trigger::DisplayConnected))
+    );
+    assert!(
+        config
+            .rules
+            .iter()
+            .any(|rule| rule.when.contains(&Trigger::DisplayMirrored))
+    );
+    assert_eq!(Config::default().ignore, Ignore::default());
+}
+
+fn display(name: &str, vendor: u32, model: u32, serial: Option<u32>) -> DisplayInfo {
+    DisplayInfo {
+        id: 2,
+        name: name.to_owned(),
+        vendor,
+        model,
+        serial,
+        builtin: false,
+        mirrored: false,
+    }
+}
+
+#[test]
+fn ignore_section_parses_and_matches() {
+    let config = Config::from_toml(
+        r#"
+[ignore]
+capture_apps = [{ bundle_id = "com.displaylink.DisplayLinkUserAgent" }, { name = "Luna Display" }]
+displays = [
+  { name = "lg hdr" },
+  { id = { vendor = 7789, model = 30471 } },
+  { id = { vendor = 1552, model = 41006, serial = 12345 } },
+]
+"#,
+    )
+    .unwrap();
+    let ignore = &config.ignore;
+    assert_eq!(
+        ignore.displays[2],
+        DisplaySelector::Id(DisplayId {
+            vendor: 1552,
+            model: 41006,
+            serial: Some(12345)
+        })
+    );
+
+    let app = |id: &str, name: &str| AppRef {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        pid: None,
+    };
+    assert!(ignore.capture_app(&app(
+        "com.displaylink.DisplayLinkUserAgent",
+        "DisplayLink Manager"
+    )));
+    assert!(ignore.capture_app(&app("com.example.luna", "LUNA DISPLAY")));
+    assert!(!ignore.capture_app(&app("us.zoom.xos", "zoom.us")));
+
+    assert!(ignore.display(&display("LG HDR 4K", 1, 1, None)));
+    assert!(ignore.display(&display("", 7789, 30471, Some(99))));
+    assert!(ignore.display(&display("Studio", 1552, 41006, Some(12345))));
+    assert!(!ignore.display(&display("Studio", 1552, 41006, Some(54321))));
+    assert!(!ignore.display(&display("Studio", 1552, 41006, None)));
+    assert!(!ignore.display(&display("EPSON PJ", 4675, 1, None)));
+
+    let text = config.to_toml();
+    assert_eq!(Config::from_toml(&text).unwrap(), config);
+}
+
+#[test]
+fn bad_ignore_entries() {
+    let text = r#"
+[ignore]
+capture_apps = [{ bundle_id = "com.displaylink.DisplayLinkUserAgent" }, { name = "  " }, { exe = "" }]
+displays = [
+  { name = "LG" },
+  { name = " " },
+  { id = { vendor = 0, model = 1 } },
+  { id = { vendor = 1970170734, model = 1 } },
+  { id = { vendor = 65535, model = 0 } },
+]
+"#;
+    assert_eq!(
+        issues_in(text),
+        [
+            pair("ignore.capture_apps[1]", "empty_app"),
+            pair("ignore.capture_apps[2]", "empty_app"),
+            pair("ignore.displays[1]", "empty_display_name"),
+            pair("ignore.displays[2]", "invalid_display_vendor"),
+            pair("ignore.displays[3]", "invalid_display_vendor"),
+        ]
+    );
+    assert!(matches!(
+        Config::from_toml("[ignore]\ndisplays = [{ id = { vendor = 1 } }]"),
+        Err(ConfigError::Parse(_))
+    ));
 }
 
 #[test]

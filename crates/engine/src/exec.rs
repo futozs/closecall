@@ -168,7 +168,7 @@ impl Core {
                 config: Arc::clone(&state.config),
                 lists: Arc::clone(&state.lists),
                 capabilities: state.capabilities.concat(),
-                protect_apps: self.protect_apps(state.fusion.capturing_app()),
+                protect_apps: self.protect_apps(&state.fusion.capturing_apps()),
                 untitled_save_dir: expand(&state.config.untitled_save_dir, &self.settings.home),
                 now_ms: now.mono_ms,
             };
@@ -662,6 +662,7 @@ pub(crate) fn trigger_name(fired: &FiredTrigger) -> &'static str {
         FiredTrigger::Panic => "panic",
         FiredTrigger::ScreenShare { .. } => "screen_share",
         FiredTrigger::DisplayMirrored => "display_mirrored",
+        FiredTrigger::DisplayConnected => "display_connected",
         FiredTrigger::CallLikely => "call_likely",
         FiredTrigger::WillSleep => "will_sleep",
         FiredTrigger::LidClosed => "lid_closed",

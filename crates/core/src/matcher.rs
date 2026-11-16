@@ -2,7 +2,10 @@ use globset::{GlobBuilder, GlobMatcher};
 use url::{Host, Url};
 
 use crate::text::fold;
-use crate::{AppSelector, CategoryDef, CategoryId, Evidence, Matcher, Target, TargetKind, Tri};
+use crate::{
+    AppRef, AppSelector, CategoryDef, CategoryId, DisplayInfo, DisplaySelector, Evidence, Matcher,
+    Target, TargetKind, Tri,
+};
 
 pub trait CategoryIndex {
     fn category(&self, id: &CategoryId) -> Option<&CategoryDef>;
@@ -30,10 +33,40 @@ pub(crate) fn matches(matcher: &Matcher, target: &Target, ctx: &MatchContext<'_>
 }
 
 pub fn app_matches(selector: &AppSelector, target: &Target) -> bool {
+    let process_exe = match &target.kind {
+        TargetKind::Process(process) => Some(process.exe.as_str()),
+        _ => None,
+    };
+    selects(selector, &target.app, process_exe)
+}
+
+/// For a running app that is not a target, such as a background agent capturing the screen.
+pub fn app_ref_matches(selector: &AppSelector, app: &AppRef) -> bool {
+    selects(selector, app, None)
+}
+
+fn selects(selector: &AppSelector, app: &AppRef, process_exe: Option<&str>) -> bool {
     match selector {
-        AppSelector::BundleId(id) | AppSelector::DesktopId(id) => target.app.id == *id,
-        AppSelector::Exe(exe) => exe_matches(exe, target),
-        AppSelector::Name(name) => fold(&target.app.name) == fold(name),
+        AppSelector::BundleId(id) | AppSelector::DesktopId(id) => app.id == *id,
+        AppSelector::Exe(exe) => exe_matches(exe, &app.id, process_exe),
+        AppSelector::Name(name) => fold(&app.name) == fold(name),
+    }
+}
+
+pub fn display_matches(selector: &DisplaySelector, display: &DisplayInfo) -> bool {
+    match selector {
+        DisplaySelector::Name(name) => {
+            let needle = fold(name.trim());
+            // An empty name would match every display.
+            !needle.trim().is_empty() && fold(&display.name).contains(&needle)
+        }
+        DisplaySelector::Id(id) => {
+            id.vendor == display.vendor
+                && id.model == display.model
+                && id
+                    .serial
+                    .is_none_or(|serial| display.serial == Some(serial))
+        }
     }
 }
 
@@ -243,13 +276,9 @@ pub(crate) fn compile_glob(pattern: &str) -> Result<GlobMatcher, globset::Error>
         .map(|glob| glob.compile_matcher())
 }
 
-fn exe_matches(selector: &str, target: &Target) -> bool {
+fn exe_matches(selector: &str, app_id: &str, process_exe: Option<&str>) -> bool {
     let selector = selector.to_lowercase();
-    let process_exe = match &target.kind {
-        TargetKind::Process(process) => Some(process.exe.as_str()),
-        _ => None,
-    };
-    std::iter::once(target.app.id.as_str())
+    std::iter::once(app_id)
         .chain(process_exe)
         .map(str::to_lowercase)
         .any(|candidate| candidate == selector || file_name(&candidate) == selector)

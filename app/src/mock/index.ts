@@ -16,15 +16,17 @@ import type { StepOutcome } from "../bindings/StepOutcome";
 import type { StepReport } from "../bindings/StepReport";
 import { hostOf, parseDur } from "../format";
 import { EVENTS } from "../ipc";
-import { categoriesIn, triggerDur, triggerKind } from "../model";
+import { appSelectorMatches, categoriesIn, triggerDur, triggerKind } from "../model";
 import {
   capabilities,
   categories,
+  displays,
   emptyConfig,
   inventory,
   type MockItem,
   permissions,
   recommendedConfig,
+  runningApps,
   seedActivity,
   signalSources,
 } from "./data";
@@ -162,6 +164,7 @@ const FIRED_KINDS = new Set([
   "panic",
   "screen_share",
   "display_mirrored",
+  "display_connected",
   "call_likely",
   "will_sleep",
   "lid_closed",
@@ -193,6 +196,22 @@ export function installMock() {
   let activity = seedActivity(now);
   let nextRunId = 3;
   let autostart = true;
+  // `?state=docked`: the DisplayLink agent holds the share watcher, like on a USB dock.
+  const docked = state === "docked";
+  const heldBy = (current: Config) =>
+    docked
+      ? (runningApps.find(
+          (app) =>
+            app.id === "com.displaylink.DisplayLinkUserAgent" &&
+            current.ignore.capture_apps.some((selector) => appSelectorMatches(selector, app)),
+        )?.name ?? null)
+      : null;
+  const sourcesFor = (ignored: string | null) =>
+    signalSources.map((source) =>
+      ignored && source.id === "share_watcher"
+        ? { ...source, health: { state: "noisy" as const, reason_key: "reason.capture_ignored" } }
+        : source,
+    );
   let status: Status = {
     platform: "macos",
     app_version: "0.1.0",
@@ -200,13 +219,15 @@ export function installMock() {
       active: state === "sharing",
       confidence: state === "sharing" ? "high" : null,
       mirrored_display: state === "mirrored",
+      external_display: false,
       call_likely: false,
+      ignored_capture: heldBy(config),
     },
     guard_active: state === "sharing" || state === "mirrored",
     paused_until_ms: state === "paused" ? now + 40 * 60_000 : null,
     last_run: null,
     permissions: perms,
-    signal_sources: signalSources,
+    signal_sources: sourcesFor(heldBy(config)),
     needs_onboarding: query.has("onboarding"),
   };
   const summarize = (report: RunReport) => {
@@ -267,7 +288,13 @@ export function installMock() {
 
   const saved = (next: Config) => {
     config = next;
-    status = { ...status, needs_onboarding: false };
+    const ignored = heldBy(next);
+    status = {
+      ...status,
+      share: { ...status.share, ignored_capture: ignored },
+      signal_sources: sourcesFor(ignored),
+      needs_onboarding: false,
+    };
     announce();
   };
 
@@ -323,6 +350,10 @@ export function installMock() {
           return structuredClone(capabilities);
         case "list_categories":
           return structuredClone(categories);
+        case "list_displays":
+          return structuredClone(displays);
+        case "list_running_apps":
+          return structuredClone(runningApps);
         case "pause":
           status = { ...status, paused_until_ms: Date.now() + Number(args.minutes) * 60_000 };
           announce();

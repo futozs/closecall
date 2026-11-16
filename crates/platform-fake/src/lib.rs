@@ -4,6 +4,7 @@
 
 mod controller;
 mod provider;
+mod system;
 mod targets;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -14,9 +15,10 @@ use closecall_core::platform::{
     EventSender, InventoryEvent, Permission, PermissionBroker, PermissionState, PermissionStatus,
     Platform, Provider, RequestOutcome, Signal, SignalError, SignalSource, SourceHealth,
 };
-use closecall_core::{Action, StepOutcome, Target, UnsavedPolicy};
+use closecall_core::{Action, AppRef, DisplayInfo, StepOutcome, Target, UnsavedPolicy};
 
 pub use controller::FakeController;
+pub use system::{DISPLAYLINK, demo_displays, demo_running_apps, external_display, running_app};
 pub use targets::{
     app_window, chrome_incognito_tab, chrome_tab, demo_inventory, document, process, safari_tab,
 };
@@ -72,7 +74,8 @@ impl FakePlatform {
         }
     }
 
-    /// The scripted demo inventory: sensitive tabs, a meeting tab, invoices and private apps.
+    /// The scripted demo inventory: sensitive tabs, a meeting tab, invoices and private apps,
+    /// plus the running apps and displays of a laptop with two monitors.
     pub fn demo() -> Self {
         let platform = Self::new();
         {
@@ -81,6 +84,8 @@ impl FakePlatform {
                 let key = targets::key_of(&target);
                 state.items.insert(key, Item::new(target));
             }
+            state.running_apps = demo_running_apps();
+            state.displays = demo_displays();
         }
         platform
     }
@@ -147,6 +152,16 @@ impl Platform for FakePlatform {
         let shared = Arc::clone(&self.shared);
         Box::new(move || shared.state().idle)
     }
+
+    fn running_apps(&self) -> Box<dyn Fn() -> Vec<AppRef> + Send + Sync> {
+        let shared = Arc::clone(&self.shared);
+        Box::new(move || shared.state().running_apps.clone())
+    }
+
+    fn displays(&self) -> Box<dyn Fn() -> Vec<DisplayInfo> + Send + Sync> {
+        let shared = Arc::clone(&self.shared);
+        Box::new(move || shared.state().displays.clone())
+    }
 }
 
 pub(crate) struct Item {
@@ -173,6 +188,8 @@ pub(crate) struct State {
     pub requested: Vec<Permission>,
     pub denied_providers: HashMap<String, Permission>,
     pub idle: Option<Duration>,
+    pub running_apps: Vec<AppRef>,
+    pub displays: Vec<DisplayInfo>,
     pub executed: Vec<Executed>,
     pub restored: Vec<Restored>,
 }
@@ -207,6 +224,8 @@ impl Default for State {
             requested: Vec::new(),
             denied_providers: HashMap::new(),
             idle: None,
+            running_apps: Vec::new(),
+            displays: Vec::new(),
             executed: Vec::new(),
             restored: Vec::new(),
         }

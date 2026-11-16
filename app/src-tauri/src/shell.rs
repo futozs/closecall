@@ -102,7 +102,7 @@ pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 pub fn is_shared(status: &Status) -> bool {
-    status.share.active || status.share.mirrored_display
+    status.share.active || status.share.mirrored_display || status.share.external_display
 }
 
 pub fn show_window(app: &AppHandle) {

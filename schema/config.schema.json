@@ -10,6 +10,13 @@
         "$ref": "#/$defs/CategoryDef"
       }
     },
+    "ignore": {
+      "$ref": "#/$defs/Ignore",
+      "default": {
+        "capture_apps": [],
+        "displays": []
+      }
+    },
     "language": {
       "$ref": "#/$defs/Language",
       "default": "system"
@@ -207,6 +214,65 @@
         }
       ]
     },
+    "DisplayId": {
+      "description": "The vendor and product codes from the display's EDID, as the OS reports them. With\n`serial`, only that one unit; without, every display of the model.",
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "serial": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "default": null,
+          "minimum": 0
+        },
+        "vendor": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "vendor",
+        "model"
+      ]
+    },
+    "DisplaySelector": {
+      "oneOf": [
+        {
+          "description": "Part of the display's name, ignoring case and accents: `\"LG\"` covers `LG HDR 4K`.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/DisplayId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        }
+      ]
+    },
     "DocKind": {
       "type": "string",
       "enum": [
@@ -231,6 +297,29 @@
         "1d"
       ],
       "pattern": "^[0-9]+[smhd]$"
+    },
+    "Ignore": {
+      "description": "Signals that never count. `protect` spares targets from a run; this keeps the run from\nstarting at all.",
+      "type": "object",
+      "properties": {
+        "capture_apps": {
+          "description": "Screen capture by these apps is not a share, such as a dock that drives its monitors by\ncapturing the screen. While one of them runs, a capture the OS cannot attribute counts\nas theirs.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AppSelector"
+          }
+        },
+        "displays": {
+          "description": "These displays are never a projector, mirrored or not.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DisplaySelector"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "Language": {
       "type": "string",
@@ -503,6 +592,11 @@
             "lid_closed",
             "locked"
           ]
+        },
+        {
+          "description": "An external display that is not on the ignore list was connected, mirrored or not.",
+          "type": "string",
+          "const": "display_connected"
         },
         {
           "type": "object",

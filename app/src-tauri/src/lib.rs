@@ -55,6 +55,8 @@ pub fn run() -> ExitCode {
             commands::request_permission,
             commands::get_capabilities,
             commands::list_categories,
+            commands::list_displays,
+            commands::list_running_apps,
             commands::pause,
             commands::resume,
         ])

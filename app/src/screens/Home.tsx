@@ -22,9 +22,17 @@ function ShareHeadline() {
   const { status, locale } = useAppData();
   const { share } = status;
   const paused = status.paused_until_ms !== null && !share.active;
-  const state = share.active ? "sharing" : share.mirrored_display ? "mirrored" : paused ? "paused" : "idle";
+  const state = share.active
+    ? "sharing"
+    : share.mirrored_display
+      ? "mirrored"
+      : share.external_display
+        ? "external"
+        : paused
+          ? "paused"
+          : "idle";
   const until = status.paused_until_ms === null ? "" : formatWhen(status.paused_until_ms, locale);
-  const live = state === "sharing" || state === "mirrored";
+  const live = state === "sharing" || state === "mirrored" || state === "external";
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -51,6 +59,11 @@ function ShareHeadline() {
       </h1>
       <p className="mt-2 max-w-prose text-ink-2">{t(`home.body.${state}`)}</p>
       {share.call_likely && !share.active && <p className="mt-2 text-sm text-ink">{t("home.call_likely")}</p>}
+      {share.ignored_capture && !share.active && (
+        <p className="mt-2 max-w-prose text-sm text-ink-2">
+          {t("home.ignored_capture", { app: share.ignored_capture })}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { AppRef } from "./bindings/AppRef";
 import type { CapabilityReport } from "./bindings/CapabilityReport";
 import type { CategoryInfo } from "./bindings/CategoryInfo";
 import type { Config } from "./bindings/Config";
+import type { DisplayInfo } from "./bindings/DisplayInfo";
 import type { FiredTrigger } from "./bindings/FiredTrigger";
 import type { Permission } from "./bindings/Permission";
 import type { PermissionState } from "./bindings/PermissionState";
@@ -45,6 +47,12 @@ export const requestPermission = (permission: Permission) =>
 export const getCapabilities = () => invoke<CapabilityReport>("get_capabilities");
 
 export const listCategories = () => invoke<CategoryInfo[]>("list_categories");
+
+/** The built-in display included. */
+export const listDisplays = () => invoke<DisplayInfo[]>("list_displays");
+
+/** Background agents included, such as the one behind a DisplayLink dock. */
+export const listRunningApps = () => invoke<AppRef[]>("list_running_apps");
 
 export const pause = (minutes: number) => invoke<Status>("pause", { minutes });
 

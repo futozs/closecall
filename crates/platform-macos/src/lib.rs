@@ -37,17 +37,28 @@ mod signals;
 #[cfg(target_os = "macos")]
 pub use platform::MacPlatform;
 
+/// What the `macos.share_ui` source sees right now, for `examples/share_ui.rs`: bundle ids,
+/// window layers and sizes, never a title.
+#[cfg(target_os = "macos")]
+pub fn share_ui_report() -> String {
+    signals::share_ui_report()
+}
+
 #[cfg(target_os = "macos")]
 mod platform {
     use std::time::Duration;
 
     use closecall_core::platform::{PermissionBroker, Platform, Provider, SignalSource};
+    use closecall_core::{AppRef, DisplayInfo};
 
+    use crate::apps;
     use crate::permissions::MacPermissions;
     use crate::providers::{
         AppProvider, ChromiumProvider, FirefoxProvider, SafariProvider, WindowProvider,
     };
-    use crate::signals::{CallSource, DisplaySource, ScreenWatcher, SessionSource};
+    use crate::signals::{
+        CallSource, DisplaySource, ScreenWatcher, SessionSource, ShareUiSource, displays,
+    };
 
     #[derive(Debug, Default, Clone, Copy)]
     pub struct MacPlatform;
@@ -74,10 +85,11 @@ mod platform {
             ]
         }
 
-        /// "macos.skylight", "macos.display", "macos.session", "macos.call".
+        /// "macos.skylight", "macos.share_ui", "macos.display", "macos.session", "macos.call".
         fn signal_sources(&self) -> Vec<Box<dyn SignalSource>> {
             vec![
                 Box::new(ScreenWatcher::new()),
+                Box::new(ShareUiSource::new()),
                 Box::new(DisplaySource::new()),
                 Box::new(SessionSource::new()),
                 Box::new(CallSource::new()),
@@ -90,6 +102,19 @@ mod platform {
 
         fn idle_clock(&self) -> Box<dyn Fn() -> Option<Duration> + Send + Sync> {
             Box::new(crate::idle::since_last_input)
+        }
+
+        fn running_apps(&self) -> Box<dyn Fn() -> Vec<AppRef> + Send + Sync> {
+            Box::new(|| {
+                apps::listed()
+                    .iter()
+                    .map(apps::RunningApp::app_ref)
+                    .collect()
+            })
+        }
+
+        fn displays(&self) -> Box<dyn Fn() -> Vec<DisplayInfo> + Send + Sync> {
+            Box::new(displays)
         }
     }
 }

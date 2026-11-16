@@ -3,6 +3,7 @@
 mod config;
 mod documents;
 mod harness;
+mod ignore;
 mod runs;
 mod share;
 mod timers;

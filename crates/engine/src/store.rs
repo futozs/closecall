@@ -16,7 +16,7 @@ pub(crate) enum Problem {
 }
 
 pub(crate) enum Loaded {
-    Config(Config),
+    Config(Box<Config>),
     Missing,
     Rejected(Problem),
 }
@@ -32,7 +32,7 @@ pub(crate) fn load(dir: &Path) -> Loaded {
         Err(_) => return Loaded::Rejected(Problem::Unreadable),
     };
     match Config::from_toml(&text) {
-        Ok(config) => Loaded::Config(config),
+        Ok(config) => Loaded::Config(Box::new(config)),
         Err(ConfigError::Parse(_)) => Loaded::Rejected(Problem::Unparsable),
         Err(ConfigError::TooNew(version)) => Loaded::Rejected(Problem::TooNew(version)),
         Err(ConfigError::Invalid(issues)) => Loaded::Rejected(Problem::Invalid(issues.len())),

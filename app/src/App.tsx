@@ -46,14 +46,16 @@ function ShareState() {
   const { t } = useTranslation();
   const { status, locale } = useAppData();
   const { share } = status;
-  const live = share.active || share.mirrored_display;
+  const live = share.active || share.mirrored_display || share.external_display;
   const label = share.active
     ? t("shell.sharing")
     : share.mirrored_display
       ? t("shell.mirrored")
-      : status.paused_until_ms !== null
-        ? t("shell.paused", { time: formatWhen(status.paused_until_ms, locale) })
-        : t("shell.watching");
+      : share.external_display
+        ? t("shell.external")
+        : status.paused_until_ms !== null
+          ? t("shell.paused", { time: formatWhen(status.paused_until_ms, locale) })
+          : t("shell.watching");
   return (
     <p className="flex min-w-0 items-center gap-2 text-sm text-ink-2" role="status">
       <span

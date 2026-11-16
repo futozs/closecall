@@ -19,6 +19,8 @@
     "allow-request-permission",
     "allow-get-capabilities",
     "allow-list-categories",
+    "allow-list-displays",
+    "allow-list-running-apps",
     "allow-pause",
     "allow-resume",
     "autostart:allow-is-enabled",

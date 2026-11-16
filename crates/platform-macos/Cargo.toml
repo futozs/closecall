@@ -37,7 +37,12 @@ objc2-foundation = { workspace = true, features = [
   "block2",
   "objc2-core-services",
 ] }
-objc2-app-kit = { workspace = true, features = ["NSRunningApplication", "NSWorkspace"] }
+objc2-app-kit = { workspace = true, features = [
+  "NSGraphics",
+  "NSRunningApplication",
+  "NSScreen",
+  "NSWorkspace",
+] }
 objc2-application-services = { workspace = true, features = [
   "AXError",
   "AXUIElement",
@@ -57,6 +62,8 @@ objc2-core-graphics = { workspace = true, features = [
   "CGError",
   "CGEventSource",
   "CGEventTypes",
+  "CGGeometry",
+  "CGWindow",
   "libc",
 ] }
 objc2-io-kit = { workspace = true, features = ["libc"] }

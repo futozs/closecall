@@ -3,4 +3,4 @@ import type { Confidence } from "./Confidence";
 import type { Dur } from "./Dur";
 import type { TargetId } from "./TargetId";
 
-export type FiredTrigger = { "kind": "panic" } | { "kind": "screen_share", confidence: Confidence, } | { "kind": "display_mirrored" } | { "kind": "call_likely" } | { "kind": "will_sleep" } | { "kind": "lid_closed" } | { "kind": "locked" } | { "kind": "away", away: Dur, } | { "kind": "idle", idle: Dur, } | { "kind": "item_age", target: TargetId, age: Dur, };
+export type FiredTrigger = { "kind": "panic" } | { "kind": "screen_share", confidence: Confidence, } | { "kind": "display_mirrored" } | { "kind": "display_connected" } | { "kind": "call_likely" } | { "kind": "will_sleep" } | { "kind": "lid_closed" } | { "kind": "locked" } | { "kind": "away", away: Dur, } | { "kind": "idle", idle: Dur, } | { "kind": "item_age", target: TargetId, age: Dur, };

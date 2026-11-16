@@ -1,6 +1,13 @@
 //! Screen capture detection through the private `SLSIsScreenWatcherPresent`. There is no
 //! public API; confirmed so far for Zoom and `screencapture`, everything else is on the
 //! manual test list.
+//!
+//! It is one bit (byte 0x3d of the session scoreboard on 27.2), not a count, so a second
+//! capture cannot be told apart while an always-on capturer such as DisplayLink holds it. The
+//! engine puts such a capture down to an ignored app and `share_ui` covers meeting apps. SkyLight
+//! does carry per-process capture info (`SLSScreenWatcherNotificationForEach` and the
+//! `…ItemGetPID` / `…ItemGetCaptureCount` / `…ItemCopyWindowIDs` getters parse a property-list
+//! array), but only inside a notify-proc callback whose event number is unverified.
 
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};

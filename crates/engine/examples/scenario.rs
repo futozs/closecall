@@ -77,6 +77,7 @@ fn trigger_label(trigger: &closecall_core::FiredTrigger) -> String {
         F::Panic => "panic".to_owned(),
         F::ScreenShare { confidence } => format!("screen_share ({confidence:?})"),
         F::DisplayMirrored => "display_mirrored".to_owned(),
+        F::DisplayConnected => "display_connected".to_owned(),
         F::CallLikely => "call_likely".to_owned(),
         F::WillSleep => "will_sleep".to_owned(),
         F::LidClosed => "lid_closed".to_owned(),

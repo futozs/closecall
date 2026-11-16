@@ -27,6 +27,7 @@
     "watching": "Figyel",
     "sharing": "Megosztás folyik, védelem be",
     "mirrored": "Tükrözött kijelző, védelem be",
+    "external": "Külső kijelző, védelem be",
     "paused": "Szünetel {{time}}-ig"
   },
   "confidence": {
@@ -39,22 +40,26 @@
       "idle": "Figyel",
       "sharing": "Megosztás folyamatban",
       "mirrored": "Tükrözés folyamatban",
+      "external": "Külső kijelző",
       "paused": "Szünetel"
     },
     "title": {
       "idle": "Most semmi sincs megosztva",
       "sharing": "A képernyőd meg van osztva",
       "mirrored": "Ez a képernyő egy másik kijelzőn is látszik",
+      "external": "Külső kijelző van csatlakoztatva",
       "paused": "Szünetel {{time}}-ig"
     },
     "body": {
       "idle": "Amint elindul egy megosztás, csatlakozik egy kivetítő vagy lecsukod a gépet, a Close Call közbelép. Addig csak figyel.",
       "sharing": "A védelem be van kapcsolva. Ha most nyitsz meg valami érzékenyet, a Close Call rögtön bezárja vagy elrejti.",
       "mirrored": "A védelem be van kapcsolva. Ha most nyitsz meg valami érzékenyet ezen a képernyőn, a Close Call rögtön bezárja vagy elrejti.",
+      "external": "A védelem be van kapcsolva, mert a szabályaid kivetítőként kezelik azt a kijelzőt, amelyet nem vettél fel a kivételek közé. Ha most nyitsz meg valami érzékenyet, a Close Call rögtön bezárja vagy elrejti.",
       "paused": "Addig magától semmit nem zár be. A pánikgomb ettől még működik."
     },
     "confidence": "{{level}} megbízhatóság",
     "call_likely": "Úgy tűnik, mindjárt kezdődik egy hívás. Most érdemes elpakolni.",
+    "ignored_capture": "Az egyik kivételként megadott alkalmazás ({{app}}) folyamatosan rögzíti a képernyőt, ezért ez önmagában nem számít megosztásnak. A meetingalkalmazások és a böngészők megosztását a Close Call a megosztósávjukról ismeri fel.",
     "clean_now": "Elpakolás most",
     "simulate": "Megosztás kipróbálása",
     "pause_label": "Automatikus elpakolás szüneteltetése",
@@ -147,6 +152,7 @@
     "panic": "Pánikgomb",
     "screen_share": "Képernyőmegosztás",
     "display_mirrored": "Kivetítő vagy tükrözés",
+    "display_connected": "Külső kijelző csatlakozott",
     "call_likely": "Kezdődő hívás",
     "will_sleep": "Alvó állapot",
     "lid_closed": "Lecsukott fedél",
@@ -159,6 +165,7 @@
     "panic": "Pánikgomb",
     "screen_share": "Elindul egy képernyőmegosztás",
     "display_mirrored": "Kivetítő vagy tükrözés",
+    "display_connected": "Külső kijelző csatlakozik",
     "call_likely": "Mindjárt kezdődik egy hívás",
     "will_sleep": "A gép elalszik",
     "lid_closed": "Lecsukod a fedelet",
@@ -171,6 +178,7 @@
     "panic": "pánikgomb",
     "screen_share": "képernyőmegosztás",
     "display_mirrored": "kivetítő",
+    "display_connected": "külső kijelző",
     "call_likely": "kezdődő hívás",
     "will_sleep": "alvás",
     "lid_closed": "lecsukott fedél",
@@ -303,6 +311,7 @@
     "when": "Mikor",
     "when_hint": "Bármelyik esemény élesíti a szabályt.",
     "share_hint": "A Beállításokban megadott észlelési megbízhatóságot használja.",
+    "display_connected_hint": "Bármelyik kijelző, amely nincs a kivételek között a Beállításokban, tükrözve vagy anélkül.",
     "targets": "Mit nézzen",
     "match": "Mire illik",
     "match_hint": "Mitől számít érzékenynek egy elem. A védett elemekhez akkor sem nyúl, ha ide illenek.",
@@ -447,6 +456,9 @@
       "lone_not": "A „Nem” egymagában szinte mindenre illik. Tedd egy „Mindegyik” csoportba egy másik feltétel mellé.",
       "invalid_glob": "Ez a minta hibás. Nézd meg, hogy minden [ és { le van-e zárva.",
       "invalid_domain": "Csak a domaint írd be, például otpbank.hu, https:// és útvonal nélkül.",
+      "empty_app": "Add meg az alkalmazás csomagazonosítóját vagy nevét.",
+      "empty_display_name": "Add meg a kijelző nevének egy részét.",
+      "invalid_display_vendor": "A kijelző EDID-gyártókódját add meg, egy 1 és 65535 közötti számot.",
       "unsupported_version": "Ezt a beállítást a Close Call egy újabb verziója írta. Frissítsd az alkalmazást, hogy szerkeszthesd.",
       "unknown": "Hiba itt: {{field}} ({{code}})."
     }
@@ -469,9 +481,19 @@
     "unsupported": "Ez az alkalmazás ezt nem engedi.",
     "experimental_off": "Kísérleti funkció, ki van kapcsolva.",
     "watcher_noisy": "Akkor is jelez, amikor semmi sem történik, gyakran egy dokkoló vagy egy képernyőfelvevő miatt. Csak tippként használja.",
+    "capture_ignored": "Egy kivételként megadott alkalmazás folyamatosan rögzíti a képernyőt, ezért ebből a jelből nem derül ki, ha új megosztás indul. A megosztást helyette a meetingalkalmazások és a böngészők megosztósávjáról ismeri fel.",
     "symbol_missing": "A rendszer ezen verzióján nem érhető el. A pánikgomb, a kivetítő és a fedél ettől még működik.",
     "x11_no_share_detection": "X11 alatt nem derül ki, ha valaki rögzíti a képernyőt. Megosztás előtt nyomd meg a pánikgombot.",
-    "private_not_restorable": "A privát lapokat soha nem nyitja meg újra, hogy ne kerüljenek az előzményeid közé."
+    "private_not_restorable": "A privát lapokat soha nem nyitja meg újra, hogy ne kerüljenek az előzményeid közé.",
+    "macos": {
+      "health": {
+        "screen_watcher_missing": "A macOS ezen verzióján nem érhető el. A pánikgomb, a kivetítő és a fedél ettől még működik.",
+        "screen_watcher_noisy": "Már a Close Call indulásakor jelzett, gyakran egy dokkoló vagy egy képernyőfelvevő miatt. Amíg egyszer ki nem kapcsol, csak tippként használja.",
+        "display_callback_failed": "A macOS nem engedte, hogy a Close Call figyelje a kijelzők változását.",
+        "no_input_device": "Nincs csatlakoztatott mikrofon.",
+        "window_list_unavailable": "A macOS nem adta vissza az ablakok listáját, így a megosztósávok nem látszanak."
+      }
+    }
   },
   "note": {
     "unknown": "Korlátozott: {{key}}",
@@ -492,10 +514,18 @@
     "share_watcher": "Képernyőmegosztás észlelése",
     "notify_proc": "Azonnali megosztásjelzés",
     "display": "Kivetítő és tükrözés",
+    "share_ui": "Megosztósáv a meetingalkalmazásokban és böngészőkben",
     "call_audio": "Használatban lévő mikrofon és kamera",
     "power": "Alvás és fedél",
     "lock": "Képernyőzár",
-    "idle": "Tétlenségi idő"
+    "idle": "Tétlenségi idő",
+    "macos": {
+      "skylight": "Képernyőmegosztás észlelése",
+      "share_ui": "Megosztósáv a meetingalkalmazásokban és böngészőkben",
+      "display": "Kivetítők és kijelzők",
+      "session": "Képernyőzár, alvás és fedél",
+      "call": "Használatban lévő mikrofon"
+    }
   },
   "health": {
     "ok": "Működik",
@@ -580,6 +610,29 @@
     "protect_audible_hint": "Megmarad a lap, amelyben a zenéd vagy egy videóhívás szól.",
     "protect_pinned": "Kitűzött lapok védelme",
     "protect_pinned_hint": "A kitűzött lapokat általában szándékosan tartod nyitva.",
+    "ignore": {
+      "title": "Nem számít megosztásnak",
+      "lead": "Egyes alkalmazások egész nap rögzítik a képernyőt, hogy egy kijelzőt működtessenek, ilyen például az USB-dokkolók DisplayLink-szoftvere. Az itt felsorolt alkalmazások és kijelzők soha nem indítanak takarítást.",
+      "apps": "Folyamatosan rögzítő alkalmazások",
+      "apps_hint": "Amíg valamelyik fut, a Close Call minden olyan rögzítést neki tulajdonít, amelyről a macOS nem árulja el, kié. A meetingalkalmazások és a böngészők megosztását a megosztósávjukról így is felismeri.",
+      "apps_label": "Alkalmazás a kivételek közé",
+      "apps_pick": "Válassz egy futó alkalmazást",
+      "apps_none": "Nem fut más alkalmazás.",
+      "running": "Fut",
+      "not_running": "Nem fut",
+      "displays": "Kijelzők, amelyek sosem kivetítők",
+      "displays_hint": "A saját monitoraid vagy egy kivetítő, amelyet minden nap használsz. Tükrözve vagy anélkül, egyik sem indít el semmit.",
+      "displays_label": "Kijelző a kivételek közé",
+      "displays_pick": "Válassz egy csatlakoztatott kijelzőt",
+      "displays_none": "Nincs csatlakoztatva más külső kijelző.",
+      "connected": "Csatlakoztatva",
+      "not_connected": "Nincs csatlakoztatva",
+      "display_name": "A neve tartalmazza: „{{name}}”",
+      "display_model": "{{vendor}}, típuskód: {{model}}",
+      "display_unnamed": "{{id}}. kijelző",
+      "treat_connected": "Minden más külső kijelző kivetítőnek számít",
+      "treat_connected_hint": "A kivetítőre vonatkozó szabályok akkor is lefutnak, ha egy fent nem szereplő kijelző csatlakozik, tükrözve vagy anélkül. Alapból ki van kapcsolva, mert egy asztali monitor minden nap beindítaná őket."
+    },
     "list_add": "Hozzáadás",
     "list_remove": "{{item}} törlése",
     "list_empty": "Még nincs.",
@@ -606,6 +659,7 @@
       "accessibility": "Kisegítő lehetőségek",
       "automation": "Böngészők és alkalmazások",
       "notifications": "Értesítések",
+      "capture": "Állandó rögzítés",
       "os": "Rendszerbeállítások",
       "dry_run": "Próbafutás",
       "login": "Indítás bejelentkezéskor"
@@ -637,6 +691,12 @@
     "notifications": {
       "title": "Kapj rövid jelzést minden elpakolás után",
       "body": "Csak darabszámok, például „3 bezárva, 1 elrejtve”. Cím, webcím vagy fájlnév soha."
+    },
+    "capture": {
+      "title": "{{app}}: egész nap rögzíti a képernyőt",
+      "body": "A dokkolón lévő monitorokat úgy működteti, hogy rögzíti a képernyőt, ezért a macOS egész nap megosztást jelez. Ha kivételként kezeled, a Close Call a valódi megosztásokat a meetingalkalmazások és a böngészők megosztósávjáról ismeri fel.",
+      "toggle": "Ne számítson megosztásnak",
+      "toggle_hint": "Ezt később a Beállításokban módosíthatod."
     },
     "os": {
       "title": "Ezeket érdemes átállítani a Rendszerbeállításokban",

@@ -187,7 +187,13 @@ export function RuleEditor({ initial, isNew }: { initial: Rule; isNew: boolean }
               key={kind}
               type="checkbox"
               label={t(`when.${kind}`)}
-              description={kind === "screen_share" ? t("editor.share_hint") : undefined}
+              description={
+                kind === "screen_share"
+                  ? t("editor.share_hint")
+                  : kind === "display_connected"
+                    ? t("editor.display_connected_hint")
+                    : undefined
+              }
               checked={kinds.includes(kind)}
               onChange={(on) => setTrigger(kind, on)}
             />

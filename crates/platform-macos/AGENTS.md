@@ -9,8 +9,9 @@ Implements the `crates/core` platform traits for macOS 14+. Depends only on `clo
 - AX and Apple Events never run on the main thread. Set `AXUIElementSetMessagingTimeout` (0.5 s) on
   every app element; wrap every script in a 2 s timeout.
 - Never send an Apple Event to an app that is not running (it launches it). Check first.
-- Never request Screen Recording. `CGWindowList` is for owner PIDs and window counts only; titles come
-  from AX ([ADR-0003](../../docs/decisions/0003-never-request-screen-recording.md)).
+- Never request Screen Recording. `CGWindowList` is for owner PIDs, window counts, layers and bounds
+  only (none of them needs the permission); titles come from AX
+  ([ADR-0003](../../docs/decisions/0003-never-request-screen-recording.md)).
 - Never prompt for a permission from provider or signal code. Prompts happen only through
   `PermissionBroker::request`, which the app calls during onboarding or at launch, never mid-share.
 - Pick sheet and dialog buttons by role (`AXDefaultButton`, `AXCancelButton`, the remaining button),

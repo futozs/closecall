@@ -4,14 +4,25 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::matcher::{compile_glob, parse_domain};
+use crate::matcher::{app_ref_matches, compile_glob, display_matches, parse_domain};
 use crate::plan::trigger_allows_confirm;
+use crate::text::fold;
 use crate::{
-    Action, AppSelector, CategoryDef, CategoryId, Confidence, Confirm, Dur, Matcher, Rule, RuleId,
-    TargetKindTag, Trigger, UnsavedPolicy,
+    Action, AppRef, AppSelector, CategoryDef, CategoryId, Confidence, Confirm, DisplayInfo,
+    DisplaySelector, Dur, Matcher, Rule, RuleId, TargetKindTag, Trigger, UnsavedPolicy,
 };
 
 pub const CONFIG_VERSION: u32 = 1;
+
+/// Bundle ids of apps that capture the screen for as long as they run, so the OS reports a
+/// share all day. The recommended preset ignores them.
+///
+/// - DisplayLink Manager drives the monitors on a DisplayLink USB dock by capturing the screen
+///   and keeps the macOS screen watcher on while it runs.
+///
+/// Remote-access agents (AnyDesk, Splashtop, TeamViewer) are left out on purpose: they capture
+/// only during a remote session, and a remote session is a real share.
+pub const KNOWN_CAPTURE_APPS: &[&str] = &["com.displaylink.DisplayLinkUserAgent"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
@@ -25,6 +36,7 @@ pub struct Config {
     pub untitled_save_dir: String,
     pub restore_window: Dur,
     pub protect: Protect,
+    pub ignore: Ignore,
     pub categories: Vec<CategoryDef>,
     #[serde(rename = "rule")]
     #[ts(rename = "rule")]
@@ -41,6 +53,7 @@ impl Default for Config {
             untitled_save_dir: "~/Documents/Close Call".to_owned(),
             restore_window: Dur::from_hours(2),
             protect: Protect::default(),
+            ignore: Ignore::default(),
             categories: Vec::new(),
             rules: Vec::new(),
         }
@@ -78,6 +91,34 @@ impl Default for Protect {
             audible_tabs: false,
             pinned_tabs: false,
         }
+    }
+}
+
+/// Signals that never count. `protect` spares targets from a run; this keeps the run from
+/// starting at all.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+#[ts(export)]
+pub struct Ignore {
+    /// Screen capture by these apps is not a share, such as a dock that drives its monitors by
+    /// capturing the screen. While one of them runs, a capture the OS cannot attribute counts
+    /// as theirs.
+    pub capture_apps: Vec<AppSelector>,
+    /// These displays are never a projector, mirrored or not.
+    pub displays: Vec<DisplaySelector>,
+}
+
+impl Ignore {
+    pub fn capture_app(&self, app: &AppRef) -> bool {
+        self.capture_apps
+            .iter()
+            .any(|selector| app_ref_matches(selector, app))
+    }
+
+    pub fn display(&self, display: &DisplayInfo) -> bool {
+        self.displays
+            .iter()
+            .any(|selector| display_matches(selector, display))
     }
 }
 
@@ -182,6 +223,13 @@ impl Config {
                     )
                 },
             ],
+            ignore: Ignore {
+                capture_apps: KNOWN_CAPTURE_APPS
+                    .iter()
+                    .map(|id| AppSelector::BundleId((*id).to_owned()))
+                    .collect(),
+                displays: Vec::new(),
+            },
             ..Self::default()
         }
     }
@@ -196,6 +244,23 @@ impl Config {
             if parse_domain(domain).is_none() {
                 issues.push(None, format!("protect.domains[{i}]"), "invalid_domain");
             }
+        }
+        for (i, app) in self.ignore.capture_apps.iter().enumerate() {
+            if selector_value(app).trim().is_empty() {
+                issues.push(None, format!("ignore.capture_apps[{i}]"), "empty_app");
+            }
+        }
+        for (i, display) in self.ignore.displays.iter().enumerate() {
+            let code = match display {
+                DisplaySelector::Name(name) if fold(name).trim().is_empty() => "empty_display_name",
+                // EDID vendor codes are three letters packed into 16 bits; 0 and anything wider
+                // is the OS saying it does not know, which would match every such display.
+                DisplaySelector::Id(id) if !(1..=0xFFFF).contains(&id.vendor) => {
+                    "invalid_display_vendor"
+                }
+                _ => continue,
+            };
+            issues.push(None, format!("ignore.displays[{i}]"), code);
         }
         for (c, category) in self.categories.iter().enumerate() {
             for (i, domain) in category.domains.iter().enumerate() {
@@ -321,6 +386,15 @@ impl Issues {
             }
             _ => {}
         }
+    }
+}
+
+fn selector_value(selector: &AppSelector) -> &str {
+    match selector {
+        AppSelector::BundleId(value)
+        | AppSelector::Exe(value)
+        | AppSelector::DesktopId(value)
+        | AppSelector::Name(value) => value,
     }
 }
 

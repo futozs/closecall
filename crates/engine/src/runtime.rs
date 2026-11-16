@@ -10,9 +10,11 @@ use closecall_core::config::Config;
 use closecall_core::ipc::{RunReport, RunSummary, SignalSourceStatus, Status};
 use closecall_core::platform::{
     Discovered, InventoryEvent, PermissionBroker, PermissionState, ProviderError, Signal,
-    SignalSource,
+    SignalKind, SignalSource, SourceHealth,
 };
-use closecall_core::{AppSelector, Capability, Dur, FiredTrigger, TargetId, TargetKind};
+use closecall_core::{
+    AppRef, AppSelector, Capability, DisplayInfo, Dur, FiredTrigger, TargetId, TargetKind,
+};
 use closecall_lists::Lists;
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded};
 
@@ -24,6 +26,7 @@ use crate::store::Problem;
 use crate::{EngineOptions, EngineSettings, EngineSink, Notice};
 
 const REFRESH_MS: u64 = 30_000;
+const CAPTURE_IGNORED: &str = "reason.capture_ignored";
 const IDLE_POLL_MS: u64 = 30_000;
 const BACKGROUND_TICK: Duration = Duration::from_secs(1);
 pub(crate) const ACTIVITY_CAP: usize = 50;
@@ -39,6 +42,8 @@ pub(crate) enum Msg {
         capabilities: Vec<Capability>,
     },
     Signal(Signal),
+    /// The ignore list may have changed: put running captures down to ignored apps again.
+    Reattribute,
     Tick(Option<Sender<()>>),
     Flush(Sender<()>),
     Shutdown,
@@ -79,11 +84,7 @@ impl State {
     }
 
     pub fn guard_active(&self, now: Now) -> bool {
-        !self.paused(now)
-            && !self
-                .fusion
-                .guard_triggers(self.config.share_min_confidence)
-                .is_empty()
+        !self.paused(now) && !self.fusion.guard_triggers(&self.config).is_empty()
     }
 
     pub fn next_run_id(&mut self) -> u64 {
@@ -101,6 +102,8 @@ pub(crate) struct Core {
     pub broker: Mutex<Box<dyn PermissionBroker>>,
     pub permissions: Mutex<Vec<PermissionState>>,
     pub idle_clock: Box<dyn Fn() -> Option<Duration> + Send + Sync>,
+    pub running_apps: Box<dyn Fn() -> Vec<AppRef> + Send + Sync>,
+    pub displays: Box<dyn Fn() -> Vec<DisplayInfo> + Send + Sync>,
     pub sink: Arc<dyn EngineSink>,
     pub settings: EngineSettings,
     pub home: String,
@@ -123,10 +126,10 @@ impl Core {
         }
     }
 
-    /// Our own app always, plus the app that is capturing the screen when the OS names it.
-    pub fn protect_apps(&self, capturing_app: Option<&str>) -> Vec<AppSelector> {
+    /// Our own app always, plus the apps capturing the screen where a source names them.
+    pub fn protect_apps(&self, capturing_apps: &[&str]) -> Vec<AppSelector> {
         std::iter::once(self.settings.own_app_id.as_str())
-            .chain(capturing_app)
+            .chain(capturing_apps.iter().copied())
             .flat_map(|app| {
                 [
                     AppSelector::BundleId(app.to_owned()),
@@ -145,7 +148,7 @@ impl Core {
         Status {
             platform: self.platform.to_owned(),
             app_version: self.settings.app_version.clone(),
-            share: state.fusion.share_state(state.config.share_min_confidence),
+            share: state.fusion.share_state(&state.config),
             guard_active: state.guard_active(now),
             paused_until_ms,
             last_run: state.last_run.clone(),
@@ -155,12 +158,27 @@ impl Core {
         }
     }
 
+    /// A source whose capture is put down to an ignored app cannot see a new share start, so
+    /// it reports as noisy with the reason, whatever it says itself.
     pub fn source_statuses(&self) -> Vec<SignalSourceStatus> {
+        let ignored: Vec<String> = lock(&self.state)
+            .fusion
+            .ignored_sources()
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
         lock(&self.sources)
             .iter()
-            .map(|source| SignalSourceStatus {
-                id: source.id(),
-                health: source.health(),
+            .map(|source| {
+                let id = source.id();
+                let health = if ignored.contains(&id) {
+                    SourceHealth::Noisy {
+                        reason_key: CAPTURE_IGNORED.to_owned(),
+                    }
+                } else {
+                    source.health()
+                };
+                SignalSourceStatus { id, health }
             })
             .collect()
     }
@@ -186,8 +204,8 @@ impl Core {
 
     pub fn sharing(&self) -> bool {
         let state = lock(&self.state);
-        let share = state.fusion.share_state(state.config.share_min_confidence);
-        share.active || share.mirrored_display
+        let share = state.fusion.share_state(&state.config);
+        share.active || share.mirrored_display || share.external_display
     }
 
     pub fn capabilities(&self) -> Vec<Capability> {
@@ -226,6 +244,10 @@ impl Core {
                 Msg::Signal(signal) => {
                     self.guard(&mut guard_ids);
                     self.on_signal(&signal);
+                }
+                Msg::Reattribute => {
+                    self.guard(&mut guard_ids);
+                    self.reattribute();
                 }
                 Msg::Tick(ack) => {
                     self.guard(&mut guard_ids);
@@ -316,18 +338,79 @@ impl Core {
     }
 
     fn on_signal(&self, signal: &Signal) {
+        let config = Arc::clone(&lock(&self.state).config);
+        let ignored_by = (signal.kind == SignalKind::CaptureStarted)
+            .then(|| self.ignored_capturer(&config, signal.capturing_app.as_deref()))
+            .flatten();
         let now = self.now();
         let out = {
             let mut state = lock(&self.state);
             let paused = state.paused(now);
-            let config = Arc::clone(&state.config);
-            let out = state.fusion.on_signal(signal, now, &config, paused);
+            let out = state
+                .fusion
+                .on_signal(signal, ignored_by, now, &config, paused);
             if !state.guard_active(now) {
                 state.acted.clear();
             }
             out
         };
         tracing::debug!(kind = ?signal.kind, fired = out.fire.len(), "signal");
+        self.apply(out);
+    }
+
+    /// The ignored app a capture is put down to: the one the source names, or, when the OS
+    /// cannot tell, any ignored capturer that is running.
+    fn ignored_capturer(&self, config: &Config, capturing_app: Option<&str>) -> Option<String> {
+        let ignore = &config.ignore;
+        if ignore.capture_apps.is_empty() {
+            return None;
+        }
+        let running = (self.running_apps)();
+        match capturing_app {
+            Some(id) => {
+                let app = running
+                    .into_iter()
+                    .find(|app| app.id == id)
+                    .unwrap_or_else(|| AppRef {
+                        id: id.to_owned(),
+                        name: id.to_owned(),
+                        pid: None,
+                    });
+                ignore.capture_app(&app).then_some(app.name)
+            }
+            None => running
+                .into_iter()
+                .find(|app| ignore.capture_app(app))
+                .map(|app| app.name),
+        }
+    }
+
+    fn reattribute(&self) {
+        let (config, captures) = {
+            let state = lock(&self.state);
+            (Arc::clone(&state.config), state.fusion.running_captures())
+        };
+        let attributed: Vec<(String, Option<String>)> = captures
+            .into_iter()
+            .map(|(source, app)| {
+                let ignored_by = self.ignored_capturer(&config, app.as_deref());
+                (source, ignored_by)
+            })
+            .collect();
+        let now = self.now();
+        let out = {
+            let mut state = lock(&self.state);
+            let paused = state.paused(now);
+            let mut out = Outcome::default();
+            for (source, ignored_by) in attributed {
+                out.merge(
+                    state
+                        .fusion
+                        .reattribute(&source, ignored_by, now, &config, paused),
+                );
+            }
+            out
+        };
         self.apply(out);
     }
 
@@ -432,9 +515,7 @@ impl Core {
             if state.paused(now) {
                 return;
             }
-            let triggers = state
-                .fusion
-                .guard_triggers(state.config.share_min_confidence);
+            let triggers = state.fusion.guard_triggers(&state.config);
             let scope: BTreeSet<TargetId> = ids
                 .into_iter()
                 .filter(|id| {

@@ -14,7 +14,10 @@ uses `platform-fake`. No Tauri dependency: the app crate wraps the engine, not t
 - Step deadlines: 300 ms for Conceal, 1 s per tab batch, 2 s per document with a sheet.
 - Debounce: the same trigger does not fire again within 10 s, except Panic. Share stop is debounced 3 s.
 - Share-guard: while a share or mirroring is active, every added or changed target is re-planned
-  against the rules armed by `screen_share`/`display_mirrored` and acted on at once.
+  against the rules armed by `screen_share`/`display_mirrored` and acted on at once; the same for
+  `display_connected` while a display that is not ignored is connected and a rule arms it.
+- `config.ignore`: a capture put down to an ignored app, and an ignored display, count for nothing.
+  An unattributed capture is put down to an ignored app whenever one runs.
 - Never prompt for permissions while a share or projector is active.
 - The restore journal stays in memory and expires after `restore_window`. Logs carry rule ids,
   counts and outcomes, never titles, URLs or paths.

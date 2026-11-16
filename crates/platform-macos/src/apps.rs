@@ -89,6 +89,29 @@ pub(crate) fn regular() -> Vec<RunningApp> {
     })
 }
 
+/// What a user could put on the ignore list: Dock apps, plus menu-bar and background agents
+/// that are not part of macOS (DisplayLink Manager runs as one). Sorted by name.
+pub(crate) fn listed() -> Vec<RunningApp> {
+    let mut apps: Vec<RunningApp> = autoreleasepool(|_| {
+        NSWorkspace::sharedWorkspace()
+            .runningApplications()
+            .iter()
+            .filter(|app| !app.isTerminated() && process_exists(app.processIdentifier()))
+            .filter_map(|app| {
+                let regular = app.activationPolicy() == NSApplicationActivationPolicy::Regular;
+                let described = describe(&app);
+                let third_party = described
+                    .bundle_id
+                    .as_deref()
+                    .is_some_and(|id| !id.starts_with("com.apple."));
+                ((regular || third_party) && !described.is_own()).then_some(described)
+            })
+            .collect()
+    });
+    apps.sort_by_cached_key(|app| app.name.to_lowercase());
+    apps
+}
+
 fn running(pid: i32) -> Option<Retained<NSRunningApplication>> {
     NSRunningApplication::runningApplicationWithProcessIdentifier(pid)
         .filter(|app| !app.isTerminated() && process_exists(pid))

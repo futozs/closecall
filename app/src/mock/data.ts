@@ -1,7 +1,9 @@
 import type { Action } from "../bindings/Action";
+import type { AppRef } from "../bindings/AppRef";
 import type { CapabilityReport } from "../bindings/CapabilityReport";
 import type { CategoryInfo } from "../bindings/CategoryInfo";
 import type { Config } from "../bindings/Config";
+import type { DisplayInfo } from "../bindings/DisplayInfo";
 import type { Evidence } from "../bindings/Evidence";
 import type { PermissionState } from "../bindings/PermissionState";
 import type { Rule } from "../bindings/Rule";
@@ -10,6 +12,7 @@ import type { SignalSourceStatus } from "../bindings/SignalSourceStatus";
 import type { Support } from "../bindings/Support";
 import type { TargetKindTag } from "../bindings/TargetKindTag";
 import type { TargetSummary } from "../bindings/TargetSummary";
+import { KNOWN_CAPTURE_APPS } from "../model";
 
 const shareTriggers: Rule["when"] = ["panic", "screen_share", "display_mirrored"];
 
@@ -34,6 +37,7 @@ export function recommendedConfig(): Config {
     untitled_save_dir: "~/Documents/Close Call",
     restore_window: "2h",
     protect: { categories: ["meeting"], apps: [], domains: [], audible_tabs: false, pinned_tabs: false },
+    ignore: { capture_apps: KNOWN_CAPTURE_APPS.map((bundle_id) => ({ bundle_id })), displays: [] },
     categories: [],
     rule: [
       presetRule({
@@ -98,8 +102,52 @@ export function recommendedConfig(): Config {
 }
 
 export function emptyConfig(): Config {
-  return { ...recommendedConfig(), rule: [] };
+  return { ...recommendedConfig(), ignore: { capture_apps: [], displays: [] }, rule: [] };
 }
+
+const app = (id: string, name: string, pid: number): AppRef => ({ id, name, pid });
+
+/** A laptop on a DisplayLink dock, as the owner of this project uses it. */
+export const runningApps: AppRef[] = [
+  app("com.1password.1password", "1Password", 611),
+  app("com.displaylink.DisplayLinkUserAgent", "DisplayLink Manager", 612),
+  app("com.google.Chrome", "Google Chrome", 613),
+  app("com.microsoft.Word", "Microsoft Word", 614),
+  app("com.apple.Preview", "Preview", 615),
+  app("com.apple.Safari", "Safari", 616),
+  app("org.whispersystems.signal-desktop", "Signal", 617),
+  app("us.zoom.xos", "zoom.us", 618),
+];
+
+export const displays: DisplayInfo[] = [
+  {
+    id: 1,
+    name: "Built-in Retina Display",
+    vendor: 1552,
+    model: 41059,
+    serial: null,
+    builtin: true,
+    mirrored: false,
+  },
+  {
+    id: 2,
+    name: "LG HDR WFHD (2)",
+    vendor: 7789,
+    model: 23481,
+    serial: 22073,
+    builtin: false,
+    mirrored: false,
+  },
+  {
+    id: 7,
+    name: "LG HDR WFHD (1)",
+    vendor: 7789,
+    model: 23482,
+    serial: 156010,
+    builtin: false,
+    mirrored: false,
+  },
+];
 
 export interface MockItem {
   id: number;
@@ -236,6 +284,7 @@ export const permissions: PermissionState[] = [
 
 export const signalSources: SignalSourceStatus[] = [
   { id: "share_watcher", health: { state: "ok" } },
+  { id: "share_ui", health: { state: "ok" } },
   { id: "notify_proc", health: { state: "unavailable", reason_key: "reason.experimental_off" } },
   { id: "display", health: { state: "ok" } },
   { id: "call_audio", health: { state: "noisy", reason_key: "reason.watcher_noisy" } },

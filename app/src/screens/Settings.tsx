@@ -2,13 +2,22 @@ import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Capability } from "../bindings/Capability";
 import type { Config } from "../bindings/Config";
+import type { DisplayInfo } from "../bindings/DisplayInfo";
+import type { DisplaySelector } from "../bindings/DisplaySelector";
 import { CloseIcon, ExternalIcon } from "../components/icons";
 import { PermissionRow, permissionKey, SourceRow } from "../components/Preflight";
 import { Button, CheckRow, Choice, ErrorNote, Keys, PageHeader, Section, Switch } from "../components/ui";
 import { categoryName, issueMessage, keyedMessage } from "../evidence";
 import { acceleratorFromEvent, formatDur, hotkeyKeys, isMac } from "../format";
 import * as ipc from "../ipc";
-import { appSelectorFromLine, appSelectorParts } from "../model";
+import {
+  appSelectorFromLine,
+  appSelectorMatches,
+  appSelectorParts,
+  displaySelectorFor,
+  displaySelectorMatches,
+  pnpVendor,
+} from "../model";
 import { useAppData, useLoad } from "../store";
 
 const SOURCE_URL = "https://github.com/futozs/closecall";
@@ -31,9 +40,23 @@ function useSave() {
   return { config, save, error };
 }
 
-function Row({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
+/** `wide` keeps the label above the content until the window is wide enough for a list of names. */
+function Row({
+  label,
+  hint,
+  wide = false,
+  children,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  const columns = wide
+    ? "lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start"
+    : "sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:items-start";
   return (
-    <div className="grid gap-x-8 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:items-start">
+    <div className={`grid gap-x-8 gap-y-1.5 py-3 ${columns}`}>
       <div>
         <div className="font-medium">{label}</div>
         {hint && <p className="mt-0.5 text-sm text-ink-2">{hint}</p>}
@@ -326,6 +349,239 @@ function Protection() {
   );
 }
 
+interface Option {
+  value: string;
+  label: string;
+}
+
+function PickToAdd({
+  label,
+  placeholder,
+  options,
+  none,
+  onAdd,
+}: {
+  label: string;
+  placeholder: string;
+  options: Option[];
+  none: string;
+  onAdd: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [picked, setPicked] = useState("");
+  const selectId = useId();
+  if (options.length === 0) return <p className="text-sm text-ink-3">{none}</p>;
+  const value = options.some((option) => option.value === picked) ? picked : "";
+  return (
+    <div className="flex flex-wrap gap-2">
+      <label htmlFor={selectId} className="sr-only">
+        {label}
+      </label>
+      <select
+        id={selectId}
+        className="select min-w-0 flex-1 basis-56"
+        value={value}
+        onChange={(event) => setPicked(event.target.value)}
+      >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <Button
+        disabled={!value}
+        onClick={() => {
+          onAdd(value);
+          setPicked("");
+        }}
+      >
+        {t("settings.list_add")}
+      </Button>
+    </div>
+  );
+}
+
+function IgnoredRow({
+  name,
+  detail,
+  state,
+  onRemove,
+}: {
+  name: string;
+  detail?: string;
+  state: string;
+  onRemove: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <li className="flex items-center gap-3 py-1.5">
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium" title={name}>
+          {name}
+        </div>
+        <div className="truncate text-sm text-ink-2" title={detail}>
+          {state}
+          {detail && <span className="data"> · {detail}</span>}
+        </div>
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={t("settings.list_remove", { item: name })}
+        onClick={onRemove}
+      >
+        <CloseIcon className="size-3.5" />
+      </Button>
+    </li>
+  );
+}
+
+function displayName(t: ReturnType<typeof useTranslation>["t"], display: DisplayInfo): string {
+  return display.name || t("settings.ignore.display_unnamed", { id: display.id });
+}
+
+function selectorLabel(t: ReturnType<typeof useTranslation>["t"], selector: DisplaySelector): string {
+  if ("name" in selector) return t("settings.ignore.display_name", { name: selector.name });
+  return t("settings.ignore.display_model", {
+    vendor: pnpVendor(selector.id.vendor),
+    model: selector.id.model,
+  });
+}
+
+function Ignored() {
+  const { t } = useTranslation();
+  const { config, save, error } = useSave();
+  const running = useLoad(ipc.listRunningApps);
+  const connected = useLoad(ipc.listDisplays);
+  const { ignore } = config;
+  const apps = [...new Map((running.data ?? []).map((app) => [app.id, app])).values()];
+  const externals = (connected.data ?? []).filter((display) => !display.builtin);
+
+  const appOptions = apps
+    .filter((app) => !ignore.capture_apps.some((selector) => appSelectorMatches(selector, app)))
+    .map((app) => ({ value: app.id, label: app.name }));
+  const displayOptions = externals
+    .filter((display) => !ignore.displays.some((selector) => displaySelectorMatches(selector, display)))
+    .flatMap((display) => {
+      const selector = displaySelectorFor(display);
+      return selector ? [{ value: String(display.id), label: displayName(t, display), selector }] : [];
+    });
+
+  const projectorRules = config.rule.filter((rule) => rule.when.includes("display_mirrored"));
+  const treatConnected =
+    projectorRules.length > 0 && projectorRules.every((rule) => rule.when.includes("display_connected"));
+  const setTreatConnected = (on: boolean) =>
+    void save({
+      rule: config.rule.map((rule) => {
+        if (!rule.when.includes("display_mirrored")) return rule;
+        const others = rule.when.filter((trigger) => trigger !== "display_connected");
+        return { ...rule, when: on ? [...others, "display_connected"] : others };
+      }),
+    });
+
+  return (
+    <Section title={t("settings.ignore.title")} lead={t("settings.ignore.lead")}>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {(running.error !== null || connected.error !== null) && <ErrorNote>{t("common.error")}</ErrorNote>}
+      <div className="divide-y divide-rule">
+        <Row label={t("settings.ignore.apps")} hint={t("settings.ignore.apps_hint")} wide>
+          {ignore.capture_apps.length > 0 ? (
+            <ul className="mb-2 divide-y divide-rule border-y border-rule">
+              {ignore.capture_apps.map((selector) => {
+                const { kind, value } = appSelectorParts(selector);
+                const app = apps.find((candidate) => appSelectorMatches(selector, candidate));
+                return (
+                  <IgnoredRow
+                    key={`${kind}:${value}`}
+                    name={app?.name ?? value}
+                    detail={app ? value : undefined}
+                    state={app ? t("settings.ignore.running") : t("settings.ignore.not_running")}
+                    onRemove={() =>
+                      void save({
+                        ignore: {
+                          ...ignore,
+                          capture_apps: ignore.capture_apps.filter((other) => other !== selector),
+                        },
+                      })
+                    }
+                  />
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mb-2 text-sm text-ink-3">{t("settings.list_empty")}</p>
+          )}
+          {running.data && (
+            <PickToAdd
+              label={t("settings.ignore.apps_label")}
+              placeholder={t("settings.ignore.apps_pick")}
+              none={t("settings.ignore.apps_none")}
+              options={appOptions}
+              onAdd={(id) =>
+                void save({
+                  ignore: { ...ignore, capture_apps: [...ignore.capture_apps, { bundle_id: id }] },
+                })
+              }
+            />
+          )}
+        </Row>
+        <Row label={t("settings.ignore.displays")} hint={t("settings.ignore.displays_hint")} wide>
+          {ignore.displays.length > 0 ? (
+            <ul className="mb-2 divide-y divide-rule border-y border-rule">
+              {ignore.displays.map((selector) => {
+                const matching = externals.filter((display) => displaySelectorMatches(selector, display));
+                const first = matching[0];
+                const label = selectorLabel(t, selector);
+                return (
+                  <IgnoredRow
+                    key={JSON.stringify(selector)}
+                    name={first && "id" in selector ? displayName(t, first) : label}
+                    detail={first && "id" in selector ? label : undefined}
+                    state={first ? t("settings.ignore.connected") : t("settings.ignore.not_connected")}
+                    onRemove={() =>
+                      void save({
+                        ignore: {
+                          ...ignore,
+                          displays: ignore.displays.filter((other) => other !== selector),
+                        },
+                      })
+                    }
+                  />
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mb-2 text-sm text-ink-3">{t("settings.list_empty")}</p>
+          )}
+          {connected.data && (
+            <PickToAdd
+              label={t("settings.ignore.displays_label")}
+              placeholder={t("settings.ignore.displays_pick")}
+              none={t("settings.ignore.displays_none")}
+              options={displayOptions}
+              onAdd={(value) => {
+                const selector = displayOptions.find((option) => option.value === value)?.selector;
+                if (selector) void save({ ignore: { ...ignore, displays: [...ignore.displays, selector] } });
+              }}
+            />
+          )}
+        </Row>
+        <Switch
+          label={t("settings.ignore.treat_connected")}
+          description={t("settings.ignore.treat_connected_hint")}
+          checked={treatConnected}
+          disabled={projectorRules.length === 0}
+          onChange={setTreatConnected}
+        />
+      </div>
+    </Section>
+  );
+}
+
 function capabilityLine(t: ReturnType<typeof useTranslation>["t"], capability: Capability, locale: string) {
   const line = t(`capability.${capability.action}`, { kinds: t(`target_plural.${capability.target_kind}`) });
   return capability.app ? line : line.charAt(0).toLocaleUpperCase(locale) + line.slice(1);
@@ -444,6 +700,7 @@ export function Settings() {
       <PageHeader title={t("settings.title")} />
       <General />
       <Protection />
+      <Ignored />
       <Section title={t("settings.permissions")} lead={t("settings.permissions_lead")}>
         <ul>
           {permissions.map((state) => (

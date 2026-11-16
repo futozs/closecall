@@ -1,5 +1,8 @@
 import type { Action } from "./bindings/Action";
+import type { AppRef } from "./bindings/AppRef";
 import type { AppSelector } from "./bindings/AppSelector";
+import type { DisplayInfo } from "./bindings/DisplayInfo";
+import type { DisplaySelector } from "./bindings/DisplaySelector";
 import type { Dur } from "./bindings/Dur";
 import type { Matcher } from "./bindings/Matcher";
 import type { Rule } from "./bindings/Rule";
@@ -10,6 +13,7 @@ export const SIMPLE_TRIGGERS = [
   "panic",
   "screen_share",
   "display_mirrored",
+  "display_connected",
   "call_likely",
   "will_sleep",
   "lid_closed",
@@ -139,6 +143,57 @@ export function appSelector(kind: AppSelectorKind, value: string): AppSelector {
 /** A reverse-DNS line becomes a bundle id, anything else an app name. */
 export function appSelectorFromLine(line: string): AppSelector {
   return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(line) ? { bundle_id: line } : { name: line };
+}
+
+/** Mirrors `KNOWN_CAPTURE_APPS` in crates/core/src/config.rs. */
+export const KNOWN_CAPTURE_APPS: readonly string[] = ["com.displaylink.DisplayLinkUserAgent"];
+
+/** Mirrors `text::fold` in crates/core: case and accents don't matter. */
+export function fold(text: string): string {
+  return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+/** Mirrors `app_ref_matches` in crates/core/src/matcher.rs. */
+export function appSelectorMatches(selector: AppSelector, app: AppRef): boolean {
+  if ("bundle_id" in selector) return app.id === selector.bundle_id;
+  if ("desktop_id" in selector) return app.id === selector.desktop_id;
+  if ("exe" in selector) {
+    const exe = selector.exe.toLowerCase();
+    const id = app.id.toLowerCase();
+    return id === exe || id.split(/[/\\]/).pop() === exe;
+  }
+  return fold(app.name) === fold(selector.name);
+}
+
+/** Mirrors `display_matches` in crates/core/src/matcher.rs. */
+export function displaySelectorMatches(selector: DisplaySelector, display: DisplayInfo): boolean {
+  if ("name" in selector) {
+    const needle = fold(selector.name.trim());
+    return needle.trim() !== "" && fold(display.name).includes(needle);
+  }
+  const { vendor, model, serial } = selector.id;
+  return (
+    vendor === display.vendor && model === display.model && (serial === null || serial === display.serial)
+  );
+}
+
+/**
+ * Every display of the model when the OS reports an EDID vendor, so a pair of identical
+ * monitors takes one entry; otherwise the display's name.
+ */
+export function displaySelectorFor(display: DisplayInfo): DisplaySelector | null {
+  if (display.vendor >= 1 && display.vendor <= 0xffff) {
+    return { id: { vendor: display.vendor, model: display.model, serial: null } };
+  }
+  return display.name.trim() ? { name: display.name } : null;
+}
+
+/** The three letters packed into an EDID vendor number, such as GSM for LG. */
+export function pnpVendor(vendor: number): string {
+  const codes = [10, 5, 0].map((shift) => ((vendor >> shift) & 0x1f) + 64);
+  return vendor <= 0xffff && codes.every((code) => code >= 65 && code <= 90)
+    ? String.fromCharCode(...codes)
+    : String(vendor);
 }
 
 export function categoriesIn(matcher: Matcher | null): string[] {

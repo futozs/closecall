@@ -15,6 +15,8 @@
 //! | `request_permission` | `{ permission: Permission }`  | `RequestOutcome`                |
 //! | `get_capabilities`   | –                             | `CapabilityReport`              |
 //! | `list_categories`    | –                             | `Vec<CategoryInfo>`             |
+//! | `list_displays`      | –                             | `Vec<DisplayInfo>`              |
+//! | `list_running_apps`  | –                             | `Vec<AppRef>` (background agents included) |
 //! | `pause`              | `{ minutes: u32 }`            | `Status`                        |
 //! | `resume`             | –                             | `Status`                        |
 
@@ -61,7 +63,12 @@ pub struct ShareState {
     pub active: bool,
     pub confidence: Option<Confidence>,
     pub mirrored_display: bool,
+    /// An external display that is not ignored is connected, and a rule treats that like a projector.
+    pub external_display: bool,
     pub call_likely: bool,
+    /// Name of the ignored app that holds the OS's capture signal, which therefore cannot tell
+    /// a new share apart.
+    pub ignored_capture: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

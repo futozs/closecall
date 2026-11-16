@@ -146,6 +146,7 @@ fn exact_triggers_arm_only_their_own_kind() {
             },
         ),
         (Trigger::DisplayMirrored, FiredTrigger::DisplayMirrored),
+        (Trigger::DisplayConnected, FiredTrigger::DisplayConnected),
         (Trigger::CallLikely, FiredTrigger::CallLikely),
         (Trigger::WillSleep, FiredTrigger::WillSleep),
         (Trigger::LidClosed, FiredTrigger::LidClosed),

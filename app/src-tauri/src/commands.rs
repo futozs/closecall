@@ -1,10 +1,10 @@
 //! The command table in `closecall_core::ipc`, one to one. Engine calls block, so each runs
 //! on the blocking pool.
 
-use closecall_core::FiredTrigger;
 use closecall_core::config::{Config, ValidationIssue};
 use closecall_core::ipc::{CapabilityReport, CategoryInfo, Preset, RunReport, Status};
 use closecall_core::platform::{Permission, PermissionState, RequestOutcome};
+use closecall_core::{AppRef, DisplayInfo, FiredTrigger};
 use closecall_engine::{Engine, EngineError};
 use tauri::{AppHandle, State};
 
@@ -109,6 +109,16 @@ pub async fn get_capabilities(engine: State<'_, Engine>) -> Reply<CapabilityRepo
 #[tauri::command(rename_all = "snake_case")]
 pub async fn list_categories(engine: State<'_, Engine>) -> Reply<Vec<CategoryInfo>> {
     call(&engine, |engine| Ok(engine.categories())).await
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_displays(engine: State<'_, Engine>) -> Reply<Vec<DisplayInfo>> {
+    call(&engine, |engine| Ok(engine.displays())).await
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_running_apps(engine: State<'_, Engine>) -> Reply<Vec<AppRef>> {
+    call(&engine, |engine| Ok(engine.running_apps())).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

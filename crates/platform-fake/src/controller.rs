@@ -4,7 +4,7 @@ use std::time::Duration;
 use closecall_core::platform::{
     Discovered, InventoryEvent, Permission, PermissionStatus, Signal, SignalKind, SourceHealth,
 };
-use closecall_core::{Confidence, Dirty, ProviderId, Target, TargetKind};
+use closecall_core::{AppRef, Confidence, Dirty, DisplayInfo, ProviderId, Target, TargetKind};
 
 use crate::provider::send;
 use crate::targets::key_of;
@@ -29,15 +29,52 @@ impl FakeController {
             confidence: Confidence::High,
             source: source_for(kind).to_owned(),
             capturing_app: None,
+            display: None,
         })
     }
 
     pub fn capture_started(&self, confidence: Confidence, capturing_app: Option<&str>) -> bool {
-        self.send_signal(Signal {
-            kind: SignalKind::CaptureStarted,
+        self.capture_from(
+            source_for(SignalKind::CaptureStarted),
+            SignalKind::CaptureStarted,
             confidence,
-            source: source_for(SignalKind::CaptureStarted).to_owned(),
+            capturing_app,
+        )
+    }
+
+    /// A capture signal labelled as coming from `source`, like a second share detector
+    /// (`macos.share_ui` next to `macos.skylight`) would send it.
+    pub fn capture_from(
+        &self,
+        source: &str,
+        kind: SignalKind,
+        confidence: Confidence,
+        capturing_app: Option<&str>,
+    ) -> bool {
+        self.send_signal(Signal {
+            kind,
+            confidence,
+            source: source.to_owned(),
             capturing_app: capturing_app.map(str::to_owned),
+            display: None,
+        })
+    }
+
+    /// A `Display*` signal about `display`, which also joins or leaves `displays()`.
+    pub fn display_signal(&self, kind: SignalKind, display: DisplayInfo) -> bool {
+        {
+            let mut state = self.shared.state();
+            state.displays.retain(|known| known.id != display.id);
+            if kind != SignalKind::DisplayDisconnected {
+                state.displays.push(display.clone());
+            }
+        }
+        self.send_signal(Signal {
+            kind,
+            confidence: Confidence::High,
+            source: source_for(kind).to_owned(),
+            capturing_app: None,
+            display: Some(display),
         })
     }
 
@@ -168,6 +205,10 @@ impl FakeController {
         self.shared.state().idle = idle;
     }
 
+    pub fn set_running_apps(&self, apps: Vec<AppRef>) {
+        self.shared.state().running_apps = apps;
+    }
+
     pub fn executed(&self) -> Vec<Executed> {
         self.shared.state().executed.clone()
     }
@@ -230,7 +271,10 @@ fn source_for(kind: SignalKind) -> &'static str {
             "share_watcher"
         }
         SignalKind::CallLikely | SignalKind::CallEnded => "call_audio",
-        SignalKind::DisplayMirrored | SignalKind::DisplayUnmirrored => "display",
+        SignalKind::DisplayMirrored
+        | SignalKind::DisplayUnmirrored
+        | SignalKind::DisplayConnected
+        | SignalKind::DisplayDisconnected => "display",
         SignalKind::WillSleep
         | SignalKind::DidWake
         | SignalKind::LidClosed

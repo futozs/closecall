@@ -1,7 +1,7 @@
 import type { Config } from "../bindings/Config";
 import type { Matcher } from "../bindings/Matcher";
 import type { ValidationIssue } from "../bindings/ValidationIssue";
-import { matcherKind, triggerAllowsConfirm, triggerKind } from "../model";
+import { appSelectorParts, fold, matcherKind, triggerAllowsConfirm, triggerKind } from "../model";
 
 const DOMAIN = /^(?!-)[\p{L}\p{N}-]{1,63}(\.[\p{L}\p{N}-]{1,63})+$/u;
 
@@ -38,6 +38,20 @@ function matcherIssues(matcher: Matcher, field: string, rule: string): Validatio
 export function validate(config: Config): ValidationIssue[] {
   if (config.version > 1) return [{ rule: null, field: "version", code: "unsupported_version" }];
   const issues: ValidationIssue[] = [];
+  config.ignore.capture_apps.forEach((selector, i) => {
+    if (appSelectorParts(selector).value.trim() === "") {
+      issues.push({ rule: null, field: `ignore.capture_apps[${i}]`, code: "empty_app" });
+    }
+  });
+  config.ignore.displays.forEach((selector, i) => {
+    const field = `ignore.displays[${i}]`;
+    if ("name" in selector && fold(selector.name).trim() === "") {
+      issues.push({ rule: null, field, code: "empty_display_name" });
+    }
+    if ("id" in selector && !(selector.id.vendor >= 1 && selector.id.vendor <= 0xffff)) {
+      issues.push({ rule: null, field, code: "invalid_display_vendor" });
+    }
+  });
   const seen = new Set<string>();
   for (const rule of config.rule) {
     if (seen.has(rule.id)) issues.push({ rule: rule.id, field: "id", code: "duplicate_rule_id" });

@@ -83,6 +83,8 @@ pub enum Trigger {
     Panic,
     ScreenShare,
     DisplayMirrored,
+    /// An external display that is not on the ignore list was connected, mirrored or not.
+    DisplayConnected,
     CallLikely,
     WillSleep,
     LidClosed,
@@ -99,6 +101,7 @@ pub enum FiredTrigger {
     Panic,
     ScreenShare { confidence: Confidence },
     DisplayMirrored,
+    DisplayConnected,
     CallLikely,
     WillSleep,
     LidClosed,
@@ -116,6 +119,41 @@ pub enum AppSelector {
     Exe(String),
     DesktopId(String),
     Name(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum DisplaySelector {
+    /// Part of the display's name, ignoring case and accents: `"LG"` covers `LG HDR 4K`.
+    Name(String),
+    Id(DisplayId),
+}
+
+/// The vendor and product codes from the display's EDID, as the OS reports them. With
+/// `serial`, only that one unit; without, every display of the model.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[ts(export)]
+pub struct DisplayId {
+    pub vendor: u32,
+    pub model: u32,
+    #[serde(default)]
+    pub serial: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DisplayInfo {
+    /// The OS's handle while the display is connected, not a stable identity.
+    pub id: u32,
+    /// Empty when the OS gives none.
+    pub name: String,
+    pub vendor: u32,
+    pub model: u32,
+    pub serial: Option<u32>,
+    pub builtin: bool,
+    pub mirrored: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]

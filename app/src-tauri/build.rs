@@ -15,6 +15,8 @@ const COMMANDS: &[&str] = &[
     "request_permission",
     "get_capabilities",
     "list_categories",
+    "list_displays",
+    "list_running_apps",
     "pause",
     "resume",
 ];

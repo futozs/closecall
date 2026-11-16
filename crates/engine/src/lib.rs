@@ -14,12 +14,12 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use closecall_core::FiredTrigger;
 use closecall_core::config::{Config, ValidationIssue};
 use closecall_core::ipc::{CapabilityReport, CategoryInfo, Preset, RunReport, Status};
 use closecall_core::platform::{
     EventSender, Permission, PermissionState, Platform, RequestOutcome, Signal, SignalError,
 };
+use closecall_core::{AppRef, DisplayInfo, FiredTrigger};
 use closecall_lists::Lists;
 use crossbeam_channel::{Sender, unbounded};
 
@@ -144,7 +144,7 @@ impl Engine {
         options: EngineOptions,
     ) -> Result<Self, EngineError> {
         let (config, config_problem, needs_onboarding) = match store::load(&settings.config_dir) {
-            Loaded::Config(config) => (config, None, false),
+            Loaded::Config(config) => (*config, None, false),
             Loaded::Missing => (Config::recommended(), None, true),
             Loaded::Rejected(problem) => {
                 tracing::warn!(?problem, "config not used, running the recommended preset");
@@ -189,6 +189,8 @@ impl Engine {
             broker: Mutex::new(platform.permissions()),
             permissions: Mutex::new(Vec::new()),
             idle_clock: platform.idle_clock(),
+            running_apps: platform.running_apps(),
+            displays: platform.displays(),
             sink,
             home: settings.home.to_string_lossy().into_owned(),
             settings,
@@ -256,6 +258,7 @@ impl Engine {
             state.config_problem = None;
             state.needs_onboarding = false;
         }
+        let _ = core.tx.send(Msg::Reattribute);
         core.publish_status();
         Ok(Vec::new())
     }
@@ -340,6 +343,16 @@ impl Engine {
 
     pub fn categories(&self) -> Vec<CategoryInfo> {
         lock(&self.core().state).lists.infos()
+    }
+
+    /// Connected displays, the built-in one included.
+    pub fn displays(&self) -> Vec<DisplayInfo> {
+        (self.core().displays)()
+    }
+
+    /// Running apps, background agents included, to pick from for the ignore list.
+    pub fn running_apps(&self) -> Vec<AppRef> {
+        (self.core().running_apps)()
     }
 
     /// `0` minutes resumes.

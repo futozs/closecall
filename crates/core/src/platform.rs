@@ -11,7 +11,9 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Action, Capability, Confidence, ProviderId, Step, StepOutcome, Target};
+use crate::{
+    Action, AppRef, Capability, Confidence, DisplayInfo, ProviderId, Step, StepOutcome, Target,
+};
 
 pub trait EventSender<T>: Send {
     /// Returns `false` when the receiving side is gone and the source should stop.
@@ -90,6 +92,8 @@ pub enum SignalKind {
     SharePickerOpened,
     DisplayMirrored,
     DisplayUnmirrored,
+    DisplayConnected,
+    DisplayDisconnected,
     CallLikely,
     CallEnded,
     WillSleep,
@@ -108,6 +112,8 @@ pub struct Signal {
     pub confidence: Confidence,
     pub source: String,
     pub capturing_app: Option<String>,
+    /// The display a `Display*` signal is about, when the OS identifies it.
+    pub display: Option<DisplayInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -186,5 +192,14 @@ pub trait Platform {
     /// Time since the last keyboard or mouse input, for `IdleLongerThan`.
     fn idle_clock(&self) -> Box<dyn Fn() -> Option<Duration> + Send + Sync> {
         Box::new(|| None)
+    }
+    /// Running apps, background agents included, for the ignore list and to put a capture
+    /// down to an ignored app.
+    fn running_apps(&self) -> Box<dyn Fn() -> Vec<AppRef> + Send + Sync> {
+        Box::new(Vec::new)
+    }
+    /// Connected displays, the built-in one included.
+    fn displays(&self) -> Box<dyn Fn() -> Vec<DisplayInfo> + Send + Sync> {
+        Box::new(Vec::new)
     }
 }

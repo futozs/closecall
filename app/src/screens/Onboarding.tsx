@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { AppRef } from "../bindings/AppRef";
 import type { Preset } from "../bindings/Preset";
 import { ExternalIcon, Mark } from "../components/icons";
 import { PermissionRow, permissionKey } from "../components/Preflight";
@@ -8,6 +9,7 @@ import { Button, CheckMark, CheckRow, Choice, ErrorNote, Switch } from "../compo
 import { go } from "../hash";
 import { type Locale, setLocale, systemLocale } from "../i18n";
 import * as ipc from "../ipc";
+import { appSelectorMatches, KNOWN_CAPTURE_APPS } from "../model";
 import { useAppData, useLoad } from "../store";
 
 const SOURCE_URL = "https://github.com/futozs/closecall";
@@ -16,7 +18,15 @@ const MAC_LINKS = {
   lock: "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension",
 };
 
-type StepId = "welcome" | "accessibility" | "automation" | "notifications" | "os" | "dry_run" | "login";
+type StepId =
+  | "welcome"
+  | "accessibility"
+  | "automation"
+  | "notifications"
+  | "capture"
+  | "os"
+  | "dry_run"
+  | "login";
 
 function StepFrame({ title, body, children }: { title: ReactNode; body?: ReactNode; children?: ReactNode }) {
   return (
@@ -153,6 +163,39 @@ function PermissionStep({ step, kind }: { step: StepId; kind: "automation" | "no
   );
 }
 
+/** Offered only while a known always-on capturer runs, such as the agent of a DisplayLink dock. */
+function Capture({ app }: { app: AppRef }) {
+  const { t } = useTranslation();
+  const { config, saveConfig } = useAppData();
+  const [failed, setFailed] = useState(false);
+  const { ignore } = config;
+  const ignored = ignore.capture_apps.some((selector) => appSelectorMatches(selector, app));
+  const set = async (on: boolean) => {
+    const capture_apps = on
+      ? [...ignore.capture_apps, { bundle_id: app.id }]
+      : ignore.capture_apps.filter((selector) => !appSelectorMatches(selector, app));
+    setFailed(false);
+    try {
+      await saveConfig({ ...config, ignore: { ...ignore, capture_apps } });
+    } catch {
+      setFailed(true);
+    }
+  };
+  return (
+    <StepFrame title={t("onboarding.capture.title", { app: app.name })} body={t("onboarding.capture.body")}>
+      <div className="max-w-md">
+        <Switch
+          label={t("onboarding.capture.toggle")}
+          description={t("onboarding.capture.toggle_hint")}
+          checked={ignored}
+          onChange={(on) => void set(on)}
+        />
+      </div>
+      {failed && <ErrorNote>{t("common.error")}</ErrorNote>}
+    </StepFrame>
+  );
+}
+
 function OsSettings() {
   const { t } = useTranslation();
   const { status } = useAppData();
@@ -234,6 +277,8 @@ export function Onboarding() {
   const [login, setLogin] = useState(true);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const running = useLoad(ipc.listRunningApps);
+  const capturer = running.data?.find((app) => KNOWN_CAPTURE_APPS.includes(app.id));
 
   const has = (kind: string) =>
     status.permissions.some((state) => state.permission.kind === kind && state.status !== "not_applicable");
@@ -242,6 +287,7 @@ export function Onboarding() {
     ...(has("accessibility") ? (["accessibility"] as const) : []),
     ...(has("automation") ? (["automation"] as const) : []),
     ...(has("notifications") ? (["notifications"] as const) : []),
+    ...(capturer ? (["capture"] as const) : []),
     "os",
     "dry_run",
     "login",
@@ -313,6 +359,7 @@ export function Onboarding() {
           {current === "accessibility" && <Accessibility />}
           {current === "automation" && <PermissionStep step="automation" kind="automation" />}
           {current === "notifications" && <PermissionStep step="notifications" kind="notifications" />}
+          {current === "capture" && capturer && <Capture app={capturer} />}
           {current === "os" && <OsSettings />}
           {current === "dry_run" && <DryRun />}
           {current === "login" && <Login enabled={login} onChange={setLogin} />}

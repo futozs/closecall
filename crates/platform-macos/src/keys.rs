@@ -34,3 +34,4 @@ pub const HEALTH_WATCHER_MISSING: &str = "macos.health.screen_watcher_missing";
 pub const HEALTH_WATCHER_NOISY: &str = "macos.health.screen_watcher_noisy";
 pub const HEALTH_DISPLAY_CALLBACK_FAILED: &str = "macos.health.display_callback_failed";
 pub const HEALTH_NO_INPUT_DEVICE: &str = "macos.health.no_input_device";
+pub const HEALTH_WINDOW_LIST_UNAVAILABLE: &str = "macos.health.window_list_unavailable";

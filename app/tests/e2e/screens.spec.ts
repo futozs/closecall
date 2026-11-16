@@ -9,6 +9,11 @@ const LANGUAGES = [
 ] as const;
 
 const SCREENSHOTS = join(import.meta.dirname, "..", "screenshots");
+const DISPLAYLINK = "DisplayLink Manager";
+
+function fill(message: string, value: string, key = "app"): string {
+  return message.replace(`{{${key}}}`, value);
+}
 
 async function open(page: Page, url: string) {
   const errors: string[] = [];
@@ -131,6 +136,49 @@ for (const { lang, locale, ui } of LANGUAGES) {
       expect(errors).toEqual([]);
     });
 
+    test("settings: ignored capture and displays", async ({ page }, info) => {
+      const errors = await open(page, "/#settings");
+      const section = page.getByRole("region", { name: ui.settings.ignore.title });
+      await expect(section).toBeVisible();
+      const apps = section.getByRole("list").first();
+      await expect(apps.getByText(DISPLAYLINK, { exact: true })).toBeVisible();
+      await expect(apps.getByText(new RegExp(`^${ui.settings.ignore.running} ·`))).toBeVisible();
+
+      const picker = section.getByLabel(ui.settings.ignore.displays_label);
+      await picker.selectOption({ label: "LG HDR WFHD (1)" });
+      await picker.locator("xpath=..").getByRole("button", { name: ui.settings.list_add }).click();
+      const remove = section.getByRole("button", {
+        name: fill(ui.settings.list_remove, "LG HDR WFHD (1)", "item"),
+      });
+      await expect(remove).toBeVisible();
+      await expect(
+        section.getByText(
+          fill(ui.settings.ignore.display_model, "GSM", "vendor").replace("{{model}}", "23482"),
+        ),
+      ).toBeVisible();
+      await expect(section.getByText(new RegExp(`^${ui.settings.ignore.connected} ·`))).toBeVisible();
+
+      const treat = section.getByRole("switch", { name: ui.settings.ignore.treat_connected });
+      await expect(treat).not.toBeChecked();
+      await treat.click();
+      await expect(treat).toBeChecked();
+      await section.scrollIntoViewIfNeeded();
+      await shot(page, info, "settings-ignore", lang);
+
+      await remove.click();
+      await expect(remove).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+
+    test("status while a dock holds the share watcher", async ({ page }, info) => {
+      const errors = await open(page, "/?state=docked");
+      await expect(page.getByRole("heading", { level: 1, name: ui.home.title.idle })).toBeVisible();
+      await expect(page.getByText(fill(ui.home.ignored_capture, DISPLAYLINK))).toBeVisible();
+      await expect(page.getByText(ui.reason.capture_ignored)).toBeVisible();
+      await shot(page, info, "status-docked", lang);
+      expect(errors).toEqual([]);
+    });
+
     test("onboarding", async ({ page }, info) => {
       const errors = await open(page, "/?onboarding");
       await expect(page.getByRole("heading", { level: 1, name: ui.onboarding.welcome.title })).toBeVisible();
@@ -148,6 +196,12 @@ for (const { lang, locale, ui } of LANGUAGES) {
       ).toBeVisible();
       await shot(page, info, "onboarding-automation", lang);
       await next.click();
+      await next.click();
+      await expect(
+        page.getByRole("heading", { level: 1, name: fill(ui.onboarding.capture.title, DISPLAYLINK) }),
+      ).toBeVisible();
+      await expect(page.getByRole("switch", { name: ui.onboarding.capture.toggle })).toBeChecked();
+      await shot(page, info, "onboarding-capture", lang);
       await next.click();
       await expect(page.getByRole("heading", { level: 1, name: ui.onboarding.os.title })).toBeVisible();
       await shot(page, info, "onboarding-os", lang);
