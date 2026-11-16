@@ -1,9 +1,14 @@
 use std::fmt::Write as _;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn main() {
-    let lists_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../lists");
+    // Read at run time: a compile-time `env!` would bake in the path of whichever checkout
+    // first built this script, and a shared target dir can reuse that binary elsewhere.
+    let manifest_dir = PathBuf::from(
+        std::env::var_os("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"),
+    );
+    let lists_dir = manifest_dir.join("../../lists");
     println!("cargo::rerun-if-changed={}", lists_dir.display());
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR"));
 

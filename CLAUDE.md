@@ -2,8 +2,8 @@
 
 ## Claude Code notes
 
-- Because this `CLAUDE.md` exists, Claude Code does not auto-load the nested `AGENTS.md` files. Read
-  the one for the area (`crates/core`, `crates/engine`, `crates/platform-macos`, `app`) before editing there.
+- Read the nested `AGENTS.md` for the area (`crates/core`, `crates/engine`, `crates/platform-macos`,
+  `app`) before editing there.
 - Project skills live in `.claude/skills/`: `add-category`, `add-provider`, `add-translation`,
   `verify-no-network`, and the user-only `release`.
 - Before finishing a change to dependencies, logging, IPC, Tauri capabilities, CSP or storage, run the
