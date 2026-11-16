@@ -29,5 +29,8 @@ closecall-platform-windows.workspace = true
 [target.'cfg(target_os = "linux")'.dependencies]
 closecall-platform-linux.workspace = true
 
+[dev-dependencies]
+closecall-core = { workspace = true, features = ["testing"] }
+
 [lints]
 workspace = true

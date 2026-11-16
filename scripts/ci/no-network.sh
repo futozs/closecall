@@ -11,7 +11,9 @@ set -euo pipefail
 
 # Extra command lines to check, run with `bash -c` from the repo root.
 # The engine's scripted scenario binary goes here once it exists.
-SCENARIO_COMMANDS=()
+SCENARIO_COMMANDS=(
+  "cargo run --offline --locked --quiet -p closecall-engine --example scenario --features fake"
+)
 
 if [[ "$(uname -s)" != Linux ]]; then
   echo "no-network.sh: Linux only (strace and unshare -rn do not exist on $(uname -s)). CI runs it on ubuntu-latest." >&2
